@@ -1,0 +1,7 @@
+{
+  "name": "smart-stock",
+  "description": "Your Stock Mate",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

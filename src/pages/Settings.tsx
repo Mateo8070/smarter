@@ -1,0 +1,53 @@
+import React, { useState } from 'react';
+import { useDb } from '../hooks/useDb';
+import ConfirmationModal from '../components/ConfirmationModal';
+import { useToast } from '../components/Toast';
+import {
+  SettingsPageContainer,
+  SettingsCard,
+  SettingsTitle,
+  SettingsParagraph,
+  ClearDatabaseButton,
+} from './Settings.styles';
+
+const Settings: React.FC = () => {
+  const { clearDatabase } = useDb();
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const { addToast } = useToast();
+
+  const handleConfirmClearDatabase = async () => {
+    if (!clearDatabase) return;
+    try {
+      await clearDatabase();
+      addToast('Local database cleared!', 'success');
+    } catch (error) {
+      addToast('Failed to clear database.', 'error');
+    } finally {
+      setShowConfirmModal(false);
+    }
+  };
+
+  return (
+    <SettingsPageContainer>
+      <SettingsCard>
+        <SettingsTitle>Local Data Management</SettingsTitle>
+        <SettingsParagraph>
+          This action will permanently delete all local data stored in your browser, including stock items, notes, and categories. This cannot be undone. Your data on the server will not be affected.
+        </SettingsParagraph>
+        <ClearDatabaseButton onClick={() => setShowConfirmModal(true)}>
+          Clear Local Database
+        </ClearDatabaseButton>
+      </SettingsCard>
+
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onConfirm={handleConfirmClearDatabase}
+        onCancel={() => setShowConfirmModal(false)}
+        title="Confirm Database Clear"
+        message="Are you sure you want to delete all local data? This is irreversible."
+      />
+    </SettingsPageContainer>
+  );
+};
+
+export default Settings;
