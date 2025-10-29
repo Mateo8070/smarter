@@ -55,6 +55,41 @@ const SubmitButton = styled.button`
     }
 `;
 
+const CategorySelectorContainer = styled.div`
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin: 0 -4px;
+  padding-left: 4px;
+  padding-right: 4px;
+
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+`;
+
+const CategoryButton = styled.button<{ active?: boolean }>`
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  background-color: ${({ active }) => (active ? 'var(--primary)' : 'var(--surface-variant)')};
+  color: ${({ active }) => (active ? 'white' : 'var(--text-primary)')};
+  font-weight: 500;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--primary);
+    background-color: ${({ active }) => (active ? 'var(--primary)' : 'var(--surface)')};
+    color: ${({ active }) => (active ? 'white' : 'var(--text-primary)')};
+  }
+`;
+
 interface StockFormProps {
   onSubmit: (item: Partial<Hardware>) => void;
   initialItem?: Hardware;
@@ -115,7 +150,7 @@ const StockForm: React.FC<StockFormProps> = ({ onSubmit, initialItem, categories
     inputRef.current?.focus();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setItem((prev) => ({ ...prev, [name]: value }));
   };
@@ -151,14 +186,21 @@ const StockForm: React.FC<StockFormProps> = ({ onSubmit, initialItem, categories
       </FullWidthInputGroup>
       
       <InputGrid>
-        <InputGroup>
-            <Label htmlFor="category_id">Category</Label>
-            <select id="category_id" name="category_id" value={item.category_id || ''} onChange={handleChange}>
+        <FullWidthInputGroup as={InputGroup}>
+            <Label>Category</Label>
+            <CategorySelectorContainer>
                 {categories.filter(c => !c.is_deleted).map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    <CategoryButton
+                        key={cat.id}
+                        type="button"
+                        active={item.category_id === cat.id}
+                        onClick={() => setItem(prev => ({ ...prev, category_id: cat.id }))}
+                    >
+                        {cat.name}
+                    </CategoryButton>
                 ))}
-            </select>
-        </InputGroup>
+            </CategorySelectorContainer>
+        </FullWidthInputGroup>
         <InputGroup>
             <Label htmlFor="quantity">Quantity</Label>
             <input

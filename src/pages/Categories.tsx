@@ -15,10 +15,13 @@ import {
   Toolbar,
   SearchInput,
   PrimaryButton,
+  EmptyStateContainer,
+  EmptyStateMessage,
 } from './Categories.styles';
 import { EditIcon, TrashIcon, PlusIcon, SearchIcon } from '../components/Icons';
 import ColorPickerModal from '../components/ColorPickerModal';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import Skeleton from '../components/Skeleton';
 
 const Categories: React.FC = () => {
   const { categories, addCategory, updateCategory, deleteCategory } = useDb();
@@ -84,6 +87,29 @@ const Categories: React.FC = () => {
     ) || [];
   }, [categories, searchQuery]);
 
+  if (categories === undefined) {
+    return (
+        <CategoriesPageContainer>
+            <Toolbar>
+                <div className="search-container">
+                    <Skeleton height="44px" />
+                </div>
+                {!isMobile && <Skeleton width="150px" height="44px" />}
+            </Toolbar>
+            <CardView>
+                {Array.from({ length: 8 }).map((_, i) => (
+                    <Card key={i}>
+                        <div className="category-info">
+                            <Skeleton width="32px" height="32px" style={{ borderRadius: '50%' }} />
+                            <Skeleton width="120px" height="20px" />
+                        </div>
+                    </Card>
+                ))}
+            </CardView>
+        </CategoriesPageContainer>
+    );
+  }
+
   return (
     <CategoriesPageContainer>
       <Toolbar>
@@ -103,20 +129,30 @@ const Categories: React.FC = () => {
         )}
       </Toolbar>
 
-      <CardView>
-        {filteredCategories.map((item: Category) => (
-          <Card key={item.id}>
-            <div className="category-info">
-              <button className="color-swatch" onClick={() => setCategoryForColorPicker(item)} style={{ backgroundColor: item.color || '#cccccc' }} aria-label={`Change color for ${item.name}`}></button>
-              <span className="category-name">{item.name}</span>
-            </div>
-            <div className="actions">
-              <ActionButton onClick={() => handleEdit(item)} aria-label={`Edit ${item.name}`}><EditIcon /></ActionButton>
-              <DeleteButton onClick={() => handleDeleteClick(item.id)} aria-label={`Delete ${item.name}`}><TrashIcon /></DeleteButton>
-            </div>
-          </Card>
-        ))}
-      </CardView>
+      {filteredCategories.length > 0 ? (
+        <CardView>
+          {filteredCategories.map((item: Category) => (
+            <Card key={item.id}>
+              <div className="category-info">
+                <button className="color-swatch" onClick={() => setCategoryForColorPicker(item)} style={{ backgroundColor: item.color || '#cccccc' }} aria-label={`Change color for ${item.name}`}></button>
+                <span className="category-name">{item.name}</span>
+              </div>
+              <div className="actions">
+                <ActionButton onClick={() => handleEdit(item)} aria-label={`Edit ${item.name}`}><EditIcon /></ActionButton>
+                <DeleteButton onClick={() => handleDeleteClick(item.id)} aria-label={`Delete ${item.name}`}><TrashIcon /></DeleteButton>
+              </div>
+            </Card>
+          ))}
+        </CardView>
+      ) : (
+        <EmptyStateContainer>
+          <h3>No Categories Found</h3>
+          <EmptyStateMessage>
+              {searchQuery ? "Try a different search term." : "Create your first category to organize your stock."}
+          </EmptyStateMessage>
+        </EmptyStateContainer>
+      )}
+
 
       {isMobile && (
         <FloatingActionButton onClick={() => {setEditingItem(undefined); setShowForm(true)}} aria-label="Add Category">

@@ -102,13 +102,13 @@ const MessagesContainer = styled.div`
   background-color: var(--background);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 `;
 
 const MessageBubble = styled.div<{ isUser: boolean }>`
   align-self: ${props => props.isUser ? 'flex-end' : 'flex-start'};
-  max-width: 85%;
-  padding: 12px 16px;
+  max-width: 90%;
+  padding: 10px 14px;
   border-radius: 18px;
   background-color: ${props => props.isUser ? 'var(--primary)' : 'var(--surface)'};
   color: ${props => props.isUser ? 'white' : 'var(--text-primary)'};
@@ -116,6 +116,10 @@ const MessageBubble = styled.div<{ isUser: boolean }>`
   font-size: 15px;
   line-height: 1.5;
   word-wrap: break-word;
+
+  @media (max-width: 480px) {
+    max-width: 95%;
+  }
 
   & table {
     width: 100%;
@@ -152,15 +156,23 @@ const LoadingBubble = styled.div`
 const InputContainer = styled.form`
   display: flex;
   align-items: center;
-  padding: 16px 24px;
+  padding: 12px;
   border-top: 1px solid var(--border);
   background-color: var(--surface);
-  gap: 12px;
+  gap: 8px;
+`;
+
+const InputWrapper = styled.div`
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
 `;
 
 const ChatInput = styled.textarea`
-  flex: 1;
+  width: 100%;
   padding: 12px 16px;
+  padding-left: 48px;
   border: 1px solid var(--border);
   border-radius: 24px;
   background-color: var(--surface-variant);
@@ -170,20 +182,30 @@ const ChatInput = styled.textarea`
   outline: none;
   max-height: 120px;
   transition: border-color 0.2s, box-shadow 0.2s;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
   
   &:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 2px ${({ theme }) => theme.primary}33;
+    border-radius: 24px;
   }
 `;
 
-const ActionButton = styled.button`
+const MicButton = styled.button`
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
   background-color: transparent;
   color: var(--text-secondary);
   border: none;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -195,14 +217,38 @@ const ActionButton = styled.button`
     background-color: var(--background);
     color: var(--text-primary);
   }
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
   &.mic-active {
     color: var(--danger);
   }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
 `;
+
+const SendButton = styled.button`
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+
+  &:disabled {
+    background-color: var(--text-secondary);
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: scale(0.9);
+  }
+`;
+
 
 const WelcomeScreen = styled.div`
   display: flex;
@@ -228,9 +274,10 @@ const WelcomeScreen = styled.div`
 // --- Chatbot Component ---
 interface ChatbotProps {
   isModal?: boolean;
+  isTtsEnabled?: boolean;
 }
 
-const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
+const Chatbot: React.FC<ChatbotProps> = ({ isModal, isTtsEnabled }) => {
   const { hardware, categories } = useDb();
   const [messages, setMessages] = useState<Content[]>([]);
   const [input, setInput] = useState('');
@@ -245,6 +292,13 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    // Stop speaking if component unmounts
+    return () => {
+        window.speechSynthesis.cancel();
+    };
+  }, []);
 
   const toggleListen = () => {
     if (isListening) {
@@ -353,18 +407,18 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
+    window.speechSynthesis.cancel();
     const userMessageText = input;
     setMessages(prev => [...prev, { role: 'user', parts: [{ text: userMessageText }] }]);
     setInput('');
     setIsLoading(true);
-    console.debug('[AI] Sending user message:', userMessageText);
+    let responseText = '';
 
     try {
         if (!aiClient.current) throw new Error("AI client not initialized.");
         
         if (!chatRef.current) {
             const systemInstruction = `You are a function-calling AI model for a hardware store inventory system. Your purpose is to answer user questions about stock by using the 'searchStockItems' function. You MUST call this function to answer questions. Do not answer from memory. After the function returns data, format the result as a Markdown table. If the function returns no items, inform the user. Do not make up information.`;
-            console.debug('[AI] Creating new chat session.');
             chatRef.current = aiClient.current.chats.create({
                 model: 'gemini-2.5-flash',
                 config: { systemInstruction },
@@ -376,15 +430,11 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
         let response = await chat.sendMessage({ message: userMessageText });
 
         while (response.functionCalls && response.functionCalls.length > 0) {
-            console.debug('[AI] Detected function call(s):', response.functionCalls);
-            
-            // For now, process the first function call. The SDK may support multiple in the future.
             const functionCall = response.functionCalls[0];
             
             let functionResultPayload = null;
             if (functionCall.name === 'searchStockItems') {
                 const result = searchStockItems(functionCall.args as any);
-                console.debug(`[AI] Result of '${functionCall.name}' execution:`, result);
                 functionResultPayload = { result };
             }
 
@@ -392,20 +442,16 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
                 const functionResponsePart: Part = {
                     functionResponse: { name: functionCall.name, response: functionResultPayload },
                 };
-                console.debug('[AI] Sending function response part:', functionResponsePart);
                 response = await chat.sendMessage({ parts: [functionResponsePart] });
             } else {
-                console.warn(`[AI] Unknown function call received: ${functionCall.name}`);
-                break; // Exit loop if we can't handle the function.
+                break; 
             }
         }
 
-        const responseText = response.text;
-        console.debug('[AI] Final text response received:', responseText);
+        responseText = response.text;
 
         if (!responseText?.trim()) {
             const fallbackMessage = "I'm sorry, I couldn't generate a response. Please try rephrasing your request.";
-            console.warn('[AI] Empty response received. Displaying fallback.');
             const errorResponse: Content = { role: 'model', parts: [{ text: fallbackMessage }] };
             setMessages(prev => [...prev, errorResponse]);
         } else {
@@ -419,6 +465,10 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
       setMessages(prev => [...prev, errorResponse]);
     } finally {
       setIsLoading(false);
+      if (responseText && isTtsEnabled) {
+        const utterance = new SpeechSynthesisUtterance(responseText);
+        window.speechSynthesis.speak(utterance);
+      }
     }
   };
 
@@ -455,15 +505,17 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
         <div ref={messagesEndRef} />
       </MessagesContainer>
       <InputContainer onSubmit={handleSend}>
-        <ChatInput value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyPress} placeholder="Type or speak a message..." disabled={isLoading} rows={1} />
-        {SpeechRecognitionAPI && (
-          <ActionButton type="button" onClick={toggleListen} className={isListening ? 'mic-active' : ''} aria-label={isListening ? 'Stop listening' : 'Start listening'}>
-            {isListening ? <StopCircleIcon /> : <MicrophoneIcon />}
-          </ActionButton>
-        )}
-        <ActionButton as="button" type="submit" disabled={!input.trim() || isLoading} aria-label="Send message">
+        <InputWrapper>
+          {SpeechRecognitionAPI && (
+            <MicButton type="button" onClick={toggleListen} className={isListening ? 'mic-active' : ''} aria-label={isListening ? 'Stop listening' : 'Start listening'}>
+              {isListening ? <StopCircleIcon /> : <MicrophoneIcon />}
+            </MicButton>
+          )}
+          <ChatInput value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyPress} placeholder="Type or speak a message..." disabled={isLoading} rows={1} />
+        </InputWrapper>
+        <SendButton type="submit" disabled={!input.trim() || isLoading} aria-label="Send message">
           <SendIcon />
-        </ActionButton>
+        </SendButton>
       </InputContainer>
     </ChatPageContainer>
   );

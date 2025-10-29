@@ -54,6 +54,9 @@ interface LayoutProps {
   showSuggestions: boolean;
   setShowSuggestions: (show: boolean) => void;
   handleAiClick: () => void;
+  isTtsEnabled: boolean;
+  toggleTts: () => void;
+  mainContentRef: React.RefObject<HTMLElement>;
 }
 
 const Layout: React.FC<LayoutProps> = (props) => {
@@ -61,10 +64,9 @@ const Layout: React.FC<LayoutProps> = (props) => {
     children, pageTitle, setPage, toggleTheme, theme, isSidebarOpen, toggleSidebar, goBack, canGoBack, page,
     isSearchActive, setSearchActive, searchQuery, setSearchQuery, hardware,
     openSortModal, isHeaderVisible, setIsHeaderVisible, viewMode, setViewMode,
-    showSuggestions, setShowSuggestions, handleAiClick
+    showSuggestions, setShowSuggestions, handleAiClick, isTtsEnabled, toggleTts, mainContentRef
   } = props;
 
-  const mainContentRef = useRef<HTMLElement>(null);
   const lastScrollY = useRef(0);
 
   useEffect(() => {
@@ -93,7 +95,7 @@ const Layout: React.FC<LayoutProps> = (props) => {
     return () => {
         mainEl.removeEventListener('scroll', handleScroll);
     };
-  }, [page, isHeaderVisible, setIsHeaderVisible, showSuggestions, setShowSuggestions]);
+  }, [page, isHeaderVisible, setIsHeaderVisible, showSuggestions, setShowSuggestions, mainContentRef]);
 
 
   return (
@@ -125,6 +127,8 @@ const Layout: React.FC<LayoutProps> = (props) => {
           setViewMode={setViewMode}
           showSuggestions={showSuggestions}
           setShowSuggestions={setShowSuggestions}
+          isTtsEnabled={isTtsEnabled}
+          toggleTts={toggleTts}
         />
         <MainContent ref={mainContentRef}>{children}</MainContent>
       </ContentWrapper>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Stock from './pages/Stock';
@@ -76,6 +76,8 @@ function App() {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isAiModalOpen, setAiModalOpen] = useState(false);
+  const [isTtsEnabled, setIsTtsEnabled] = useState(false);
+  const mainContentRef = useRef<HTMLElement>(null);
 
   const setPageWithHistory = (newPage: string, payload?: { auditItemId?: string }) => {
     setPage(newPage);
@@ -148,6 +150,13 @@ function App() {
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
   };
+  
+  const toggleTts = () => {
+    if (isTtsEnabled) {
+      window.speechSynthesis.cancel();
+    }
+    setIsTtsEnabled(prev => !prev);
+  };
 
   const pageTitles: { [key: string]: string } = {
     dashboard: 'Dashboard',
@@ -172,12 +181,13 @@ function App() {
         setSortModalOpen={setSortModalOpen}
         isHeaderVisible={isHeaderVisible}
         viewMode={viewMode}
+        mainContentRef={mainContentRef}
       />;
       case 'notes': return <Notes />;
       case 'categories': return <Categories />;
       case 'audit-log': return <AuditLog itemId={auditFilterItemId} />;
       case 'settings': return <Settings />;
-      case 'chatbot': return <Chatbot />;
+      case 'chatbot': return <Chatbot isTtsEnabled={isTtsEnabled} />;
       default: return <Dashboard setPage={setPageWithHistory} handleAiClick={handleAiClick} />;
     }
   };
@@ -218,11 +228,14 @@ function App() {
               showSuggestions={showSuggestions}
               setShowSuggestions={setShowSuggestions}
               handleAiClick={handleAiClick}
+              isTtsEnabled={isTtsEnabled}
+              toggleTts={toggleTts}
+              mainContentRef={mainContentRef}
             >
               {renderPage()}
             </Layout>
             <Modal isOpen={isAiModalOpen} onClose={() => setAiModalOpen(false)}>
-              <Chatbot isModal />
+              <Chatbot isModal isTtsEnabled={isTtsEnabled} />
             </Modal>
           </>
         )}

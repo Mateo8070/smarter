@@ -304,3 +304,19 @@ export const SortOption = styled.div`
     flex: 1;
   }
 `;
+
+export const EmptyStateContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 24px;
+  text-align: center;
+`;
+
+export const EmptyStateMessage = styled.p`
+  color: var(--text-secondary);
+  font-size: 16px;
+  max-width: 400px;
+  margin-top: 16px;
+`;

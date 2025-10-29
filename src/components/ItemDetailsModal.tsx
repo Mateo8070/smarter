@@ -42,14 +42,16 @@ const DescriptionValue = styled.h2`
   color: var(--text-primary);
   margin: 0;
   word-break: break-word;
+  padding-right: 40px; /* Space for close button */
 `;
 
 const ButtonContainer = styled.div`
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 12px;
   border-top: 1px solid var(--border);
   padding-top: 24px;
+  width: 100%;
 `;
 
 const ActionButton = styled.button`

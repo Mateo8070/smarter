@@ -176,3 +176,20 @@ export const FloatingActionButton = styled.button`
     height: 28px;
   }
 `;
+
+export const EmptyStateContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 24px;
+  text-align: center;
+  grid-column: 1 / -1;
+`;
+
+export const EmptyStateMessage = styled.p`
+  color: var(--text-secondary);
+  font-size: 16px;
+  max-width: 400px;
+  margin-top: 16px;
+`;

@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { HamburgerIcon, ArrowLeftIcon, SearchIcon, SortBarsIcon, MoonIcon, SunIcon, LayoutGridIcon, ListIcon } from './Icons';
+import { HamburgerIcon, ArrowLeftIcon, SearchIcon, SortBarsIcon, MoonIcon, SunIcon, LayoutGridIcon, ListIcon, Volume2Icon, VolumeXIcon } from './Icons';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import type { Hardware } from '../types/database';
 
@@ -192,6 +192,8 @@ interface AppHeaderProps {
   setViewMode: (mode: 'card' | 'table') => void;
   showSuggestions: boolean;
   setShowSuggestions: (show: boolean) => void;
+  isTtsEnabled: boolean;
+  toggleTts: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
@@ -199,7 +201,8 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
     pageTitle, toggleSidebar, goBack, canGoBack, isSidebarOpen, page, 
     isSearchActive, setSearchActive, searchQuery, setSearchQuery,
     hardware, openSortModal, theme, toggleTheme,
-    viewMode, setViewMode, showSuggestions, setShowSuggestions
+    viewMode, setViewMode, showSuggestions, setShowSuggestions,
+    isTtsEnabled, toggleTts
   } = props;
   
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -241,7 +244,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
     return (
       <HeaderContainer>
         <HeaderContent style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <HeaderButton onClick={() => setSearchActive(false)}>
+          <HeaderButton onClick={() => { setSearchActive(false); setSearchQuery(''); }}>
             <ArrowLeftIcon />
           </HeaderButton>
           <SearchContainer ref={searchRef} style={{flex: 1, margin: 0, gridColumn: 'unset'}}>
@@ -332,6 +335,11 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
               )}
             </StockActionsContainer>
           )}
+           {page === 'chatbot' && (
+            <HeaderButton onClick={toggleTts} aria-label="Toggle text to speech">
+              {isTtsEnabled ? <Volume2Icon /> : <VolumeXIcon />}
+            </HeaderButton>
+           )}
            <HeaderButton onClick={toggleTheme} aria-label="Toggle theme">
             {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
           </HeaderButton>

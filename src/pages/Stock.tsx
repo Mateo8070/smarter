@@ -20,7 +20,9 @@ import {
   TableDeleteButton,
   TableEditButton,
   PageHeader,
-  TableWrapper
+  TableWrapper,
+  EmptyStateContainer,
+  EmptyStateMessage
 } from './Stock.styles';
 import ItemDetailsModal from '../components/ItemDetailsModal';
 import {
@@ -29,6 +31,7 @@ import {
   PlusIcon,
 } from '../components/Icons';
 import Pagination from '../components/Pagination';
+import Skeleton from '../components/Skeleton';
 
 const sortOptions = [
   { value: 'description_asc', label: 'Description (A-Z)' },
@@ -49,12 +52,13 @@ interface StockProps {
   setSortModalOpen: (isOpen: boolean) => void;
   isHeaderVisible: boolean;
   viewMode: 'card' | 'table';
+  mainContentRef: React.RefObject<HTMLElement>;
 }
 
 const ITEMS_PER_PAGE = 50;
 
 const Stock: React.FC<StockProps> = (props) => {
-  const { setPage, searchQuery, sortOrder, setSortOrder, isDesktop, isSortModalOpen, setSortModalOpen, isHeaderVisible, viewMode } = props;
+  const { setPage, searchQuery, sortOrder, setSortOrder, isDesktop, isSortModalOpen, setSortModalOpen, isHeaderVisible, viewMode, mainContentRef } = props;
   const { hardware, categories, addHardware, updateHardware, deleteHardware, addAuditLog } = useDb();
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Hardware | undefined>(undefined);
@@ -70,6 +74,11 @@ const Stock: React.FC<StockProps> = (props) => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedCategoryId, sortOrder]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleAddItem = async (item: Partial<Hardware>) => {
     if (!addHardware || !addAuditLog) return;
@@ -213,6 +222,61 @@ const Stock: React.FC<StockProps> = (props) => {
     }
   }, [currentPage, totalPages]);
 
+  const renderSkeletons = () => {
+    const CardSkeletonView = () => (
+      <CardView>
+        {Array.from({ length: 12 }).map((_, index) => (
+          <Card key={index} style={{ pointerEvents: 'none' }}>
+            <div className="card-header">
+              <Skeleton height="24px" width="70%" />
+              <Skeleton height="20px" width="50px" style={{ borderRadius: '12px' }} />
+            </div>
+            <div className="card-body">
+              <div className="detail-item"><Skeleton height="12px" width="30px" /><Skeleton height="16px" width="50px" style={{ marginTop: '4px' }} /></div>
+              <div className="detail-item"><Skeleton height="12px" width="40px" /><Skeleton height="16px" width="80px" style={{ marginTop: '4px' }} /></div>
+              <div className="detail-item"><Skeleton height="12px" width="60px" /><Skeleton height="16px" width="80px" style={{ marginTop: '4px' }} /></div>
+            </div>
+          </Card>
+        ))}
+      </CardView>
+    );
+
+    const TableSkeletonView = () => (
+      <TableViewContainer>
+        <TableWrapper>
+            <StockTable>
+                <thead><tr><th>Description</th><th>Category</th><th>Quantity</th><th>Retail Price</th><th>Wholesale Price</th><th>Actions</th></tr></thead>
+                <tbody>
+                    {Array.from({ length: 10 }).map((_, i) => (
+                        <tr key={i}>
+                            <td><Skeleton height="20px" /></td><td><Skeleton height="20px" /></td><td><Skeleton height="20px" /></td>
+                            <td><Skeleton height="20px" /></td><td><Skeleton height="20px" /></td>
+                            <td><div style={{ display: 'flex', gap: '8px' }}><Skeleton width="36px" height="36px" /><Skeleton width="36px" height="36px" /></div></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </StockTable>
+        </TableWrapper>
+      </TableViewContainer>
+    );
+
+    return (
+      <StockPageContainer>
+        <PageHeader isVisible={true}>
+          <FilterContainer>
+            <Skeleton width="60px" height="34px" style={{ borderRadius: '20px' }} />
+            <Skeleton width="100px" height="34px" style={{ borderRadius: '20px' }} />
+            <Skeleton width="80px" height="34px" style={{ borderRadius: '20px' }} />
+          </FilterContainer>
+        </PageHeader>
+        {isDesktop && viewMode === 'table' ? <TableSkeletonView /> : <CardSkeletonView />}
+      </StockPageContainer>
+    );
+  };
+  
+  if (hardware === undefined) {
+    return renderSkeletons();
+  }
 
   return (
     <StockPageContainer>
@@ -227,75 +291,86 @@ const Stock: React.FC<StockProps> = (props) => {
         </FilterContainer>
       </PageHeader>
       
-      {isDesktop && viewMode === 'table' ? (
-        <TableViewContainer>
-            <TableWrapper>
-                <StockTable>
-                    <thead>
-                        <tr>
-                            <th>Description</th><th>Category</th><th>Quantity</th><th>Retail Price</th><th>Wholesale Price</th><th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {paginatedItems.map(item => (
-                            <tr key={item.id}>
-                                <td onClick={() => openDetails(item)}>{item.description}</td>
-                                <td onClick={() => openDetails(item)}>{categories?.find(c => c.id === item.category_id)?.name || 'N/A'}</td>
-                                <td onClick={() => openDetails(item)}>{item.quantity}</td>
-                                <td onClick={() => openDetails(item)}>MK {item.retail_price?.toLocaleString()} {item.retail_price_unit ? `/ ${item.retail_price_unit}` : ''}</td>
-                                <td onClick={() => openDetails(item)}>MK {item.wholesale_price?.toLocaleString()} {item.wholesale_price_unit ? `/ ${item.wholesale_price_unit}`: ''}</td>
-                                <ActionCell>
-                                    <TableEditButton onClick={() => handleEdit(item)} aria-label={`Edit ${item.description}`}><ActionEditIcon /></TableEditButton>
-                                    <TableDeleteButton onClick={() => handleDeleteClick(item.id)} aria-label={`Delete ${item.description}`}><TrashIcon /></TableDeleteButton>
-                                </ActionCell>
-                            </tr>
-                        ))}
-                    </tbody>
-                </StockTable>
-            </TableWrapper>
-        </TableViewContainer>
+      {paginatedItems.length === 0 ? (
+        <EmptyStateContainer>
+          <h3>No Items Found</h3>
+          <EmptyStateMessage>
+            {searchQuery || selectedCategoryId ? "Try adjusting your search or filter." : "Your inventory is empty. Add a new item to get started."}
+          </EmptyStateMessage>
+        </EmptyStateContainer>
       ) : (
-        <CardView>
-          {paginatedItems.map((item) => {
-            const category = categories?.find(c => c.id === item.category_id);
-            return (
-              <Card key={item.id} onClick={() => openDetails(item)}>
-                <div className="card-header">
-                  <span className="description">{item.description}</span>
-                  {category && <span className="category-tag" style={{'--category-color': category.color} as React.CSSProperties}>{category.name}</span>}
-                </div>
-                <div className="card-body">
-                  <div className="detail-item">
-                    <span className="detail-label">Qty</span>
-                    <span className="detail-value">{item.quantity || 'N/A'}</span>
+        <>
+        {isDesktop && viewMode === 'table' ? (
+          <TableViewContainer>
+              <TableWrapper>
+                  <StockTable>
+                      <thead>
+                          <tr>
+                              <th>Description</th><th>Category</th><th>Quantity</th><th>Retail Price</th><th>Wholesale Price</th><th>Actions</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {paginatedItems.map(item => (
+                              <tr key={item.id}>
+                                  <td onClick={() => openDetails(item)}>{item.description}</td>
+                                  <td onClick={() => openDetails(item)}>{categories?.find(c => c.id === item.category_id)?.name || 'N/A'}</td>
+                                  <td onClick={() => openDetails(item)}>{item.quantity}</td>
+                                  <td onClick={() => openDetails(item)}>MK {item.retail_price?.toLocaleString()} {item.retail_price_unit ? `/ ${item.retail_price_unit}` : ''}</td>
+                                  <td onClick={() => openDetails(item)}>MK {item.wholesale_price?.toLocaleString()} {item.wholesale_price_unit ? `/ ${item.wholesale_price_unit}`: ''}</td>
+                                  <ActionCell>
+                                      <TableEditButton onClick={() => handleEdit(item)} aria-label={`Edit ${item.description}`}><ActionEditIcon /></TableEditButton>
+                                      <TableDeleteButton onClick={() => handleDeleteClick(item.id)} aria-label={`Delete ${item.description}`}><TrashIcon /></TableDeleteButton>
+                                  </ActionCell>
+                              </tr>
+                          ))}
+                      </tbody>
+                  </StockTable>
+              </TableWrapper>
+          </TableViewContainer>
+        ) : (
+          <CardView>
+            {paginatedItems.map((item) => {
+              const category = categories?.find(c => c.id === item.category_id);
+              return (
+                <Card key={item.id} onClick={() => openDetails(item)}>
+                  <div className="card-header">
+                    <span className="description">{item.description}</span>
+                    {category && <span className="category-tag" style={{'--category-color': category.color} as React.CSSProperties}>{category.name}</span>}
                   </div>
-                  <div className="detail-item">
-                    <span className="detail-label">Retail</span>
-                    <span className="detail-value">
-                      MK {item.retail_price?.toLocaleString() ?? 'N/A'}
-                      {item.retail_price_unit && <span className="price-unit">/ {item.retail_price_unit}</span>}
-                    </span>
+                  <div className="card-body">
+                    <div className="detail-item">
+                      <span className="detail-label">Qty</span>
+                      <span className="detail-value">{item.quantity || 'N/A'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Retail</span>
+                      <span className="detail-value">
+                        MK {item.retail_price?.toLocaleString() ?? 'N/A'}
+                        {item.retail_price_unit && <span className="price-unit">/ {item.retail_price_unit}</span>}
+                      </span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Wholesale</span>
+                      <span className="detail-value">
+                        MK {item.wholesale_price?.toLocaleString() ?? 'N/A'}
+                        {item.wholesale_price_unit && <span className="price-unit">/ {item.wholesale_price_unit}</span>}
+                      </span>
+                    </div>
                   </div>
-                  <div className="detail-item">
-                    <span className="detail-label">Wholesale</span>
-                    <span className="detail-value">
-                      MK {item.wholesale_price?.toLocaleString() ?? 'N/A'}
-                      {item.wholesale_price_unit && <span className="price-unit">/ {item.wholesale_price_unit}</span>}
-                    </span>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </CardView>
-      )}
+                </Card>
+              );
+            })}
+          </CardView>
+        )}
 
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
+        {totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        )}
+        </>
       )}
 
       <FloatingActionButton onClick={() => { setEditingItem(undefined); setShowForm(true); }} aria-label="Add stock item">

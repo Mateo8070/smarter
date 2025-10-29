@@ -106,3 +106,11 @@ export const MicrophoneIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export const StopCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...iconProps} {...props}><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6"/></svg>
 );
+
+export const Volume2Icon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...iconProps} {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+);
+
+export const VolumeXIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...iconProps} {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+);
