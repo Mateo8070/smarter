@@ -102,7 +102,7 @@ const MessagesContainer = styled.div`
   background-color: var(--background);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 `;
 
 const MessageBubble = styled.div<{ isUser: boolean }>`

@@ -47,7 +47,7 @@ const DescriptionValue = styled.h2`
 
 const ButtonContainer = styled.div`
   display: flex;
-  justify-content: space-between;
+  justify-content: space-evenly;
   gap: 12px;
   border-top: 1px solid var(--border);
   padding-top: 24px;
@@ -68,6 +68,9 @@ const ActionButton = styled.button`
   transition: all 0.2s ease;
   white-space: nowrap;
   font-size: 1rem;
+  flex: 1;
+  justify-content: center;
+  max-width: 150px;
 
   &:hover {
     background-color: var(--background);
@@ -83,6 +86,10 @@ const ActionButton = styled.button`
     padding: 8px 12px;
     font-size: 0.875rem;
     gap: 6px;
+    flex-direction: column;
+    span {
+      display: none;
+    }
   }
 `;
 
@@ -132,9 +139,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ isOpen, onClose, it
         </DetailGrid>
 
         <ButtonContainer>
-          <ActionButton onClick={() => onEdit(item)}><EditIcon /> Edit</ActionButton>
-          <ActionButton onClick={() => onHistory(item)}><HistoryIcon /> History</ActionButton>
-          <DeleteButton onClick={() => onDelete(item.id)}><TrashIcon /> Delete</DeleteButton>
+          <ActionButton onClick={() => onEdit(item)}><EditIcon /> <span>Edit</span></ActionButton>
+          <ActionButton onClick={() => onHistory(item)}><HistoryIcon /> <span>History</span></ActionButton>
+          <DeleteButton onClick={() => onDelete(item.id)}><TrashIcon /> <span>Delete</span></DeleteButton>
         </ButtonContainer>
       </DetailsContainer>
     </Modal>
