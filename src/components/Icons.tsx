@@ -63,6 +63,10 @@ export const ArrowLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...iconProps} {...props}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
 );
 
+export const ArrowRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...iconProps} {...props}><path d="m12 5 7 7-7 7"/><path d="M5 12h14"/></svg>
+);
+
 export const SortBarsIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...iconProps} {...props}><path d="M3 6h18m-14 6h10m-7 6h4"/></svg>
 );

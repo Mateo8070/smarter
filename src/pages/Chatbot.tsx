@@ -1,10 +1,39 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
-import { GoogleGenAI, type FunctionDeclaration, Type, type GenerateContentResponse, type Content, type Part } from '@google/genai';
+import { GoogleGenAI, type FunctionDeclaration, Type, type Content, type Part, type Chat } from '@google/genai';
 import { SendIcon, BotIcon, MicrophoneIcon, StopCircleIcon } from '../components/Icons';
 import { useDb } from '../hooks/useDb';
-import type { Hardware, Category } from '../types/database';
 import { parseMarkdownToReact } from '../utils/markdown';
+
+// --- Minimal type definitions for Web Speech API ---
+// This is to solve the "Cannot find name 'SpeechRecognition'" error.
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: {
+    [key: number]: {
+      [key: number]: {
+        transcript: string;
+      };
+    };
+    length: number;
+  };
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: any;
+}
+
+// Define the SpeechRecognition interface to resolve the type error.
+interface SpeechRecognition {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onend: () => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+  start: () => void;
+  stop: () => void;
+}
 
 // --- AI Client Initialization ---
 let genAI: GoogleGenAI | null = null;
@@ -25,20 +54,18 @@ const getAiClient = (): GoogleGenAI | null => {
 };
 
 // --- Web Speech API ---
-// FIX: Cast `window` to `any` to access non-standard properties `SpeechRecognition` and `webkitSpeechRecognition`.
-// FIX: Rename `SpeechRecognition` to `SpeechRecognitionAPI` to avoid shadowing the `SpeechRecognition` type.
 const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
 // --- AI Function Declarations ---
-const getStockItemsDeclaration: FunctionDeclaration = {
-  name: 'getStockItems',
+const searchStockItemsDeclaration: FunctionDeclaration = {
+  name: 'searchStockItems',
   parameters: {
     type: Type.OBJECT,
-    description: 'Get a list of stock items from the inventory database. Returns a maximum of 20 items.',
+    description: 'Searches the inventory database for stock items. Use this to find items by name, description, or category, and to answer questions about item availability, price, quantity, or other details.',
     properties: {
-      query: {
+      itemNameOrDescription: {
         type: Type.STRING,
-        description: 'A search term to filter items by their description.',
+        description: 'The name or a descriptive keyword for the stock item to search for. For example, to find all hammers, use "hammer".',
       },
       categoryName: {
         type: Type.STRING,
@@ -210,9 +237,9 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const aiClient = useRef(getAiClient());
+  const chatRef = useRef<Chat | null>(null);
   
   const [isListening, setIsListening] = useState(false);
-  // FIX: Use the `SpeechRecognition` type, which is now unshadowed.
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
@@ -229,14 +256,12 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
   };
 
   const handleListen = () => {
-    // FIX: Check for the renamed `SpeechRecognitionAPI` constant.
     if (!SpeechRecognitionAPI) {
       alert("Sorry, your browser doesn't support speech recognition.");
       return;
     }
     
     if (!recognitionRef.current) {
-      // FIX: Instantiate using the renamed `SpeechRecognitionAPI` constant.
       const recognition = new SpeechRecognitionAPI();
       recognition.continuous = false; // Stop after a single utterance
       recognition.interimResults = true;
@@ -267,8 +292,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
     setIsListening(true);
   };
 
-  const getStockItems = (
-    args: { query?: string; categoryName?: string; sortBy?: 'description' | 'retail_price' | 'quantity'; sortOrder?: 'asc' | 'desc' },
+  const searchStockItems = (
+    args: { itemNameOrDescription?: string; categoryName?: string; sortBy?: 'description' | 'retail_price' | 'quantity'; sortOrder?: 'asc' | 'desc' },
   ): object => {
     let results = hardware ? [...hardware.filter(h => !h.is_deleted)] : [];
   
@@ -281,8 +306,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
       }
     }
   
-    if (args.query) {
-      results = results.filter(item => item.description?.toLowerCase().includes(args.query!.toLowerCase()));
+    if (args.itemNameOrDescription) {
+      results = results.filter(item => item.description?.toLowerCase().includes(args.itemNameOrDescription!.toLowerCase()));
     }
   
     if (args.sortBy) {
@@ -328,59 +353,75 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMessage: Content = { role: 'user', parts: [{ text: input }] };
-    const newMessages: Content[] = [...messages, userMessage];
-    setMessages(newMessages);
+    const userMessageText = input;
+    setMessages(prev => [...prev, { role: 'user', parts: [{ text: userMessageText }] }]);
     setInput('');
     setIsLoading(true);
+    console.debug('[AI] Sending user message:', userMessageText);
 
     try {
-      const systemInstruction = `You are a helpful inventory management assistant for 'Giya Hardware'. You can answer questions about the stock. You have access to tools to query the database. The available categories are: ${categories?.map(c => c.name).join(', ') || 'none'}. When asked for data from a tool, ALWAYS present it in a Markdown table. Do not return raw JSON. If a tool returns an empty array, inform the user that no items were found matching their criteria. If a tool returns an error, inform the user about the error.`;
-
-      let response: GenerateContentResponse = await aiClient.current.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: newMessages,
-        config: { systemInstruction },
-        tools: [{ functionDeclarations: [getStockItemsDeclaration] }]
-      });
-      
-      if (response.functionCalls && response.functionCalls.length > 0) {
-        const functionCall = response.functionCalls[0];
-        let functionResponsePayload = null;
-        let apiResponse: Content[] = [{ role: 'model', parts: [{ functionCall }] }];
-
-        if (functionCall.name === 'getStockItems') {
-            const result = getStockItems(functionCall.args as any);
-            functionResponsePayload = { result };
+        if (!aiClient.current) throw new Error("AI client not initialized.");
+        
+        if (!chatRef.current) {
+            const systemInstruction = `You are a function-calling AI model for a hardware store inventory system. Your purpose is to answer user questions about stock by using the 'searchStockItems' function. You MUST call this function to answer questions. Do not answer from memory. After the function returns data, format the result as a Markdown table. If the function returns no items, inform the user. Do not make up information.`;
+            console.debug('[AI] Creating new chat session.');
+            chatRef.current = aiClient.current.chats.create({
+                model: 'gemini-2.5-flash',
+                config: { systemInstruction },
+                tools: [{ functionDeclarations: [searchStockItemsDeclaration] }]
+            });
         }
         
-        if (functionResponsePayload) {
-          apiResponse.push({
-            role: 'user',
-            parts: [{ functionResponse: { name: functionCall.name, response: functionResponsePayload } }]
-          });
-          
-          const finalResult = await aiClient.current.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: [...newMessages, ...apiResponse],
-            config: { systemInstruction },
-            tools: [{ functionDeclarations: [getStockItemsDeclaration] }]
-          });
-          response = finalResult;
+        const chat = chatRef.current;
+        let response = await chat.sendMessage({ message: userMessageText });
+
+        while (response.functionCalls && response.functionCalls.length > 0) {
+            console.debug('[AI] Detected function call(s):', response.functionCalls);
+            
+            // For now, process the first function call. The SDK may support multiple in the future.
+            const functionCall = response.functionCalls[0];
+            
+            let functionResultPayload = null;
+            if (functionCall.name === 'searchStockItems') {
+                const result = searchStockItems(functionCall.args as any);
+                console.debug(`[AI] Result of '${functionCall.name}' execution:`, result);
+                functionResultPayload = { result };
+            }
+
+            if (functionResultPayload) {
+                const functionResponsePart: Part = {
+                    functionResponse: { name: functionCall.name, response: functionResultPayload },
+                };
+                console.debug('[AI] Sending function response part:', functionResponsePart);
+                response = await chat.sendMessage({ parts: [functionResponsePart] });
+            } else {
+                console.warn(`[AI] Unknown function call received: ${functionCall.name}`);
+                break; // Exit loop if we can't handle the function.
+            }
         }
-      }
-      
-      const modelResponse: Content = { role: 'model', parts: [{ text: response.text }] };
-      setMessages(prev => [...prev, modelResponse]);
+
+        const responseText = response.text;
+        console.debug('[AI] Final text response received:', responseText);
+
+        if (!responseText?.trim()) {
+            const fallbackMessage = "I'm sorry, I couldn't generate a response. Please try rephrasing your request.";
+            console.warn('[AI] Empty response received. Displaying fallback.');
+            const errorResponse: Content = { role: 'model', parts: [{ text: fallbackMessage }] };
+            setMessages(prev => [...prev, errorResponse]);
+        } else {
+            const modelResponse: Content = { role: 'model', parts: [{ text: responseText }] };
+            setMessages(prev => [...prev, modelResponse]);
+        }
 
     } catch (err: any) {
-      console.error("AI Error:", err);
+      console.error("[AI] An error occurred during the request:", err);
       const errorResponse: Content = { role: 'model', parts: [{ text: `AI Error: ${err.message || 'An unexpected error occurred.'}` }] };
       setMessages(prev => [...prev, errorResponse]);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -415,7 +456,6 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
       </MessagesContainer>
       <InputContainer onSubmit={handleSend}>
         <ChatInput value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyPress} placeholder="Type or speak a message..." disabled={isLoading} rows={1} />
-        {/* FIX: Check for the renamed `SpeechRecognitionAPI` constant. */}
         {SpeechRecognitionAPI && (
           <ActionButton type="button" onClick={toggleListen} className={isListening ? 'mic-active' : ''} aria-label={isListening ? 'Stop listening' : 'Start listening'}>
             {isListening ? <StopCircleIcon /> : <MicrophoneIcon />}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useDb } from '../hooks/useDb';
 import StockForm from '../components/StockForm';
 import type { Hardware } from '../types/database';
@@ -28,6 +28,7 @@ import {
   TrashIcon,
   PlusIcon,
 } from '../components/Icons';
+import Pagination from '../components/Pagination';
 
 const sortOptions = [
   { value: 'description_asc', label: 'Description (A-Z)' },
@@ -50,6 +51,8 @@ interface StockProps {
   viewMode: 'card' | 'table';
 }
 
+const ITEMS_PER_PAGE = 50;
+
 const Stock: React.FC<StockProps> = (props) => {
   const { setPage, searchQuery, sortOrder, setSortOrder, isDesktop, isSortModalOpen, setSortModalOpen, isHeaderVisible, viewMode } = props;
   const { hardware, categories, addHardware, updateHardware, deleteHardware, addAuditLog } = useDb();
@@ -61,6 +64,12 @@ const Stock: React.FC<StockProps> = (props) => {
   const { addToast } = useToast();
   const [detailsItem, setDetailsItem] = useState<Hardware | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset page to 1 when filters or sorting change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategoryId, sortOrder]);
 
   const handleAddItem = async (item: Partial<Hardware>) => {
     if (!addHardware || !addAuditLog) return;
@@ -165,7 +174,7 @@ const Stock: React.FC<StockProps> = (props) => {
     return match ? parseFloat(match[1]) : 0;
   };
 
-  const filteredAndSortedHardware = useMemo(() => {
+  const { paginatedItems, totalPages } = useMemo(() => {
     let filtered = hardware?.filter(item => !item.is_deleted) || [];
 
     if (searchQuery) {
@@ -178,7 +187,7 @@ const Stock: React.FC<StockProps> = (props) => {
       filtered = filtered.filter(item => item.category_id === selectedCategoryId);
     }
 
-    return filtered.sort((a, b) => {
+    const sorted = filtered.sort((a, b) => {
       switch (sortOrder) {
         case 'description_asc': return a.description?.localeCompare(b.description || '') || 0;
         case 'description_desc': return b.description?.localeCompare(a.description || '') || 0;
@@ -189,7 +198,21 @@ const Stock: React.FC<StockProps> = (props) => {
         default: return 0;
       }
     });
-  }, [hardware, searchQuery, selectedCategoryId, sortOrder]);
+
+    const totalPages = Math.ceil(sorted.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedItems = sorted.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    
+    return { paginatedItems, totalPages };
+  }, [hardware, searchQuery, selectedCategoryId, sortOrder, currentPage]);
+  
+  // Effect to adjust current page if it's out of bounds (e.g., after deleting items)
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+        setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
 
   return (
     <StockPageContainer>
@@ -214,7 +237,7 @@ const Stock: React.FC<StockProps> = (props) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredAndSortedHardware.map(item => (
+                        {paginatedItems.map(item => (
                             <tr key={item.id}>
                                 <td onClick={() => openDetails(item)}>{item.description}</td>
                                 <td onClick={() => openDetails(item)}>{categories?.find(c => c.id === item.category_id)?.name || 'N/A'}</td>
@@ -233,7 +256,7 @@ const Stock: React.FC<StockProps> = (props) => {
         </TableViewContainer>
       ) : (
         <CardView>
-          {filteredAndSortedHardware.map((item) => {
+          {paginatedItems.map((item) => {
             const category = categories?.find(c => c.id === item.category_id);
             return (
               <Card key={item.id} onClick={() => openDetails(item)}>
@@ -265,6 +288,14 @@ const Stock: React.FC<StockProps> = (props) => {
             );
           })}
         </CardView>
+      )}
+
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       <FloatingActionButton onClick={() => { setEditingItem(undefined); setShowForm(true); }} aria-label="Add stock item">
