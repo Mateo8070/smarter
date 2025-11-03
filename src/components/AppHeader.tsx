@@ -186,23 +186,18 @@ interface AppHeaderProps {
   setSearchQuery: (query: string) => void;
   hardware: Hardware[];
   openSortModal: () => void;
-  theme: 'light' | 'dark';
-  toggleTheme: () => void;
   viewMode: 'card' | 'table';
   setViewMode: (mode: 'card' | 'table') => void;
   showSuggestions: boolean;
   setShowSuggestions: (show: boolean) => void;
-  isTtsEnabled: boolean;
-  toggleTts: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
   const { 
     pageTitle, toggleSidebar, goBack, canGoBack, isSidebarOpen, page, 
     isSearchActive, setSearchActive, searchQuery, setSearchQuery,
-    hardware, openSortModal, theme, toggleTheme,
-    viewMode, setViewMode, showSuggestions, setShowSuggestions,
-    isTtsEnabled, toggleTts
+    hardware, openSortModal,
+    viewMode, setViewMode, showSuggestions, setShowSuggestions
   } = props;
   
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -335,14 +330,6 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
               )}
             </StockActionsContainer>
           )}
-           {page === 'chatbot' && (
-            <HeaderButton onClick={toggleTts} aria-label="Toggle text to speech">
-              {isTtsEnabled ? <Volume2Icon /> : <VolumeXIcon />}
-            </HeaderButton>
-           )}
-           <HeaderButton onClick={toggleTheme} aria-label="Toggle theme">
-            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-          </HeaderButton>
         </ActionsContainer>
       </HeaderContent>
     </HeaderContainer>

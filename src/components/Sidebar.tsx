@@ -14,6 +14,8 @@ import {
   SunIcon,
   BotIcon,
   CloseIcon,
+  Volume2Icon,
+  VolumeXIcon,
 } from './Icons';
 
 const SidebarContainer = styled.aside<{ isSidebarOpen: boolean }>`
@@ -159,54 +161,103 @@ const SidebarButton = styled(NavLink)`
 `;
 
 const Sidebar: React.FC<{
+
   setPage: (page: string) => void;
+
   toggleTheme: () => void;
+
   isSidebarOpen: boolean;
+
   toggleSidebar: () => void;
+
   handleAiClick: () => void;
+
 }> = ({ setPage, toggleTheme, isSidebarOpen, toggleSidebar, handleAiClick }) => {
+
   const theme = useTheme();
+
   const { addToast } = useToast();
 
+
+
   const handleSync = async () => {
+
     addToast('Syncing data...', 'info');
+
     try {
+
       await syncWithBackend();
+
       addToast('Sync complete!', 'success');
+
     } catch (error) {
+
       console.error('Sync failed:', error);
+
       addToast('Sync failed. Check console for details.', 'error');
+
     }
+
   };
+
+
 
   const isDark = (theme as any).background === '#111827';
 
+
+
   return (
+
     <SidebarContainer isSidebarOpen={isSidebarOpen}>
+
       <SidebarHeader>
+
         <Logo><BoxIcon /> Smart Stock</Logo>
+
         <CloseButton onClick={toggleSidebar} aria-label="Close sidebar"><CloseIcon /></CloseButton>
+
       </SidebarHeader>
+
       <SidebarBody>
+
         <NavList>
+
           <NavItem><NavLink onClick={() => setPage('dashboard')}><HomeIcon /> Dashboard</NavLink></NavItem>
+
           <NavItem><NavLink onClick={() => setPage('stock')}><BoxIcon /> Stock</NavLink></NavItem>
+
           <NavItem><NavLink onClick={() => setPage('notes')}><FileTextIcon /> Notes</NavLink></NavItem>
+
           <NavItem><NavLink onClick={() => setPage('categories')}><TagIcon /> Categories</NavLink></NavItem>
+
           <NavItem><NavLink onClick={() => setPage('audit-log')}><HistoryIcon /> Audit Log</NavLink></NavItem>
+
           <NavItem><NavLink onClick={handleAiClick}><BotIcon /> AI Assistant</NavLink></NavItem>
+
           <NavItem><NavLink onClick={() => setPage('settings')}><SettingsIcon /> Settings</NavLink></NavItem>
+
         </NavList>
+
       </SidebarBody>
+
       <SidebarFooter>
+
         <SidebarButton onClick={handleSync}><SyncIcon /> Sync Now</SidebarButton>
+
         <SidebarButton onClick={toggleTheme}>
+
           {isDark ? <SunIcon /> : <MoonIcon />}
+
           {isDark ? 'Light Mode' : 'Dark Mode'}
+
         </SidebarButton>
+
       </SidebarFooter>
+
     </SidebarContainer>
+
   );
+
 };
 
 export default Sidebar;

@@ -20,6 +20,7 @@ const InputGrid = styled.div`
 
 const FullWidthInputGroup = styled.div`
     grid-column: 1 / -1;
+    overflow: hidden;
 `;
 
 const InputGroup = styled.div`

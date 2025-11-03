@@ -90,9 +90,8 @@ const ChatPageContainer = styled.div<{ isModal?: boolean }>`
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-height: ${({ isModal }) => isModal ? '75vh' : '100%'};
-  width: ${({ isModal }) => isModal ? '700px' : '100%'};
-  max-width: ${({ isModal }) => isModal ? '90vw' : '100%'};
+  flex: 1;
+  max-height: ${({ isModal }) => isModal ? '90vh' : '100%'};
 `;
 
 const MessagesContainer = styled.div`
@@ -274,10 +273,9 @@ const WelcomeScreen = styled.div`
 // --- Chatbot Component ---
 interface ChatbotProps {
   isModal?: boolean;
-  isTtsEnabled?: boolean;
 }
 
-const Chatbot: React.FC<ChatbotProps> = ({ isModal, isTtsEnabled }) => {
+const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
   const { hardware, categories } = useDb();
   const [messages, setMessages] = useState<Content[]>([]);
   const [input, setInput] = useState('');
@@ -292,13 +290,6 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal, isTtsEnabled }) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  useEffect(() => {
-    // Stop speaking if component unmounts
-    return () => {
-        window.speechSynthesis.cancel();
-    };
-  }, []);
 
   const toggleListen = () => {
     if (isListening) {
@@ -376,8 +367,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal, isTtsEnabled }) => {
                     const qtyA = parseInt(a.quantity || '0', 10);
                     const qtyB = parseInt(b.quantity || '0', 10);
                     return (qtyA - qtyB) * order;
-                default:
-                    return 0;
+                default:                    return 0;
             }
         });
     }
@@ -407,7 +397,6 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal, isTtsEnabled }) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    window.speechSynthesis.cancel();
     const userMessageText = input;
     setMessages(prev => [...prev, { role: 'user', parts: [{ text: userMessageText }] }]);
     setInput('');
@@ -439,6 +428,14 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal, isTtsEnabled }) => {
             }
 
             if (functionResultPayload) {
+                const result = functionResultPayload.result;
+                if (result && typeof result === 'object' && 'error' in result) {
+                    // If the tool function returned an error, report it to the user.
+                    const errorResponse: Content = { role: 'model', parts: [{ text: `Error calling tool: ${result.error}` }] };
+                    setMessages(prev => [...prev, errorResponse]);
+                    setIsLoading(false);
+                    return; // Stop processing further and display the error
+                }
                 const functionResponsePart: Part = {
                     functionResponse: { name: functionCall.name, response: functionResultPayload },
                 };
@@ -454,7 +451,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal, isTtsEnabled }) => {
             const fallbackMessage = "I'm sorry, I couldn't generate a response. Please try rephrasing your request.";
             const errorResponse: Content = { role: 'model', parts: [{ text: fallbackMessage }] };
             setMessages(prev => [...prev, errorResponse]);
-        } else {
+        }
+        else {
             const modelResponse: Content = { role: 'model', parts: [{ text: responseText }] };
             setMessages(prev => [...prev, modelResponse]);
         }
@@ -465,10 +463,6 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal, isTtsEnabled }) => {
       setMessages(prev => [...prev, errorResponse]);
     } finally {
       setIsLoading(false);
-      if (responseText && isTtsEnabled) {
-        const utterance = new SpeechSynthesisUtterance(responseText);
-        window.speechSynthesis.speak(utterance);
-      }
     }
   };
 
@@ -511,7 +505,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal, isTtsEnabled }) => {
               {isListening ? <StopCircleIcon /> : <MicrophoneIcon />}
             </MicButton>
           )}
-          <ChatInput value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyPress} placeholder="Type or speak a message..." disabled={isLoading} rows={1} />
+          <ChatInput value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyPress} placeholder="type or speak" disabled={isLoading} rows={1} />
         </InputWrapper>
         <SendButton type="submit" disabled={!input.trim() || isLoading} aria-label="Send message">
           <SendIcon />

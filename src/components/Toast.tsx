@@ -59,11 +59,23 @@ const ToastMessage = styled.div<{ type: 'success' | 'error' | 'info' }>`
   }
 `;
 
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for environments where crypto.randomUUID is not available
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0,
+      v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     setToasts((prevToasts) => [...prevToasts, { id, message, type }]);
   };
 

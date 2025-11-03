@@ -76,7 +76,6 @@ function App() {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isAiModalOpen, setAiModalOpen] = useState(false);
-  const [isTtsEnabled, setIsTtsEnabled] = useState(false);
   const mainContentRef = useRef<HTMLElement>(null);
 
   const setPageWithHistory = (newPage: string, payload?: { auditItemId?: string }) => {
@@ -126,7 +125,7 @@ function App() {
     };
     initialSync();
   }, []);
-  
+
   useEffect(() => {
     const preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     setTheme(preferredTheme);
@@ -149,13 +148,6 @@ function App() {
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
-  };
-  
-  const toggleTts = () => {
-    if (isTtsEnabled) {
-      window.speechSynthesis.cancel();
-    }
-    setIsTtsEnabled(prev => !prev);
   };
 
   const pageTitles: { [key: string]: string } = {
@@ -187,7 +179,7 @@ function App() {
       case 'categories': return <Categories />;
       case 'audit-log': return <AuditLog itemId={auditFilterItemId} />;
       case 'settings': return <Settings />;
-      case 'chatbot': return <Chatbot isTtsEnabled={isTtsEnabled} />;
+      case 'chatbot': return <Chatbot />;
       default: return <Dashboard setPage={setPageWithHistory} handleAiClick={handleAiClick} />;
     }
   };
@@ -228,14 +220,12 @@ function App() {
               showSuggestions={showSuggestions}
               setShowSuggestions={setShowSuggestions}
               handleAiClick={handleAiClick}
-              isTtsEnabled={isTtsEnabled}
-              toggleTts={toggleTts}
               mainContentRef={mainContentRef}
             >
               {renderPage()}
             </Layout>
             <Modal isOpen={isAiModalOpen} onClose={() => setAiModalOpen(false)}>
-              <Chatbot isModal isTtsEnabled={isTtsEnabled} />
+              <Chatbot isModal />
             </Modal>
           </>
         )}

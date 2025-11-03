@@ -29,13 +29,13 @@ const ModalOverlay = styled.div`
 
 const ModalContent = styled.div`
   background-color: var(--surface);
-  padding: 24px 32px;
+  padding: 12px;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   position: relative;
   width: 100%;
   max-width: 500px;
-  max-height: 90vh;
+  max-height: 95vh;
   overflow-y: auto;
   animation: ${scaleIn} 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
