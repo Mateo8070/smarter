@@ -18,7 +18,8 @@ const ContentWrapper = styled.div.withConfig({
   flex: 1;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-x: hidden; /* Prevents horizontal scroll from wide children */
-  
+  min-height: 0; /* allow children with overflow to shrink inside this flex parent */
+
   @media (min-width: 769px) {
     margin-left: ${({ isSidebarOpen }) => (isSidebarOpen ? '260px' : '0')};
   }
@@ -27,6 +28,9 @@ const ContentWrapper = styled.div.withConfig({
 const MainContent = styled.main`
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* smooth/native scrolling on iOS */
+  overscroll-behavior: contain;
+  min-height: 0; /* allow this flex child to shrink and enable scrolling */
   position: relative;
 `;
 
@@ -70,7 +74,7 @@ const Layout: React.FC<LayoutProps> = (props) => {
   useEffect(() => {
     const mainEl = mainContentRef.current;
     if (!mainEl) return;
-    
+
     const handleScroll = () => {
         const currentScrollY = mainEl.scrollTop;
         if (showSuggestions) {
@@ -88,7 +92,7 @@ const Layout: React.FC<LayoutProps> = (props) => {
         }
         lastScrollY.current = currentScrollY;
     };
-    
+
     mainEl.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
         mainEl.removeEventListener('scroll', handleScroll);

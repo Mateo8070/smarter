@@ -34,6 +34,10 @@ const SidebarContainer = styled.aside<{ isSidebarOpen: boolean }>`
   flex-direction: column;
   
   @media (max-width: 768px) {
+    width: 100%;
+    left: auto;
+    right: 0;
+    transform: translateX(${({ isSidebarOpen }) => (isSidebarOpen ? '0' : '100%')});
     box-shadow: ${({ isSidebarOpen }) => (isSidebarOpen ? '0 10px 30px rgba(0,0,0,0.1)' : 'none')};
   }
 `;
@@ -160,6 +164,21 @@ const SidebarButton = styled(NavLink)`
   }
 `;
 
+const FooterLink = styled.button`
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 0;
+  text-align: center;
+  width: 100%;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+`;
+
 const Sidebar: React.FC<{
 
   setPage: (page: string) => void;
@@ -244,13 +263,9 @@ const Sidebar: React.FC<{
 
         <SidebarButton onClick={handleSync}><SyncIcon /> Sync Now</SidebarButton>
 
-        <SidebarButton onClick={toggleTheme}>
-
-          {isDark ? <SunIcon /> : <MoonIcon />}
-
-          {isDark ? 'Light Mode' : 'Dark Mode'}
-
-        </SidebarButton>
+        <FooterLink onClick={toggleTheme}>
+          {isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        </FooterLink>
 
       </SidebarFooter>
 

@@ -95,7 +95,7 @@ const SearchWrapper = styled.div`
   display: flex;
   align-items: center;
   width: 100%;
-  
+
   svg {
     position: absolute;
     left: 14px;
@@ -161,7 +161,7 @@ const ViewModeButton = styled(HeaderButton)<{ active?: boolean }>`
   box-shadow: ${({ active }) => active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'};
   border-radius: 6px;
   padding: 6px;
-  
+
   &:hover {
     background-color: var(--surface);
     color: var(--primary);
@@ -190,16 +190,18 @@ interface AppHeaderProps {
   setViewMode: (mode: 'card' | 'table') => void;
   showSuggestions: boolean;
   setShowSuggestions: (show: boolean) => void;
+  handleAiClick?: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
-  const { 
-    pageTitle, toggleSidebar, goBack, canGoBack, isSidebarOpen, page, 
+  const {
+    pageTitle, toggleSidebar, goBack, canGoBack, isSidebarOpen, page,
     isSearchActive, setSearchActive, searchQuery, setSearchQuery,
     hardware, openSortModal,
     viewMode, setViewMode, showSuggestions, setShowSuggestions
+    , handleAiClick
   } = props;
-  
+
   const isMobile = useMediaQuery('(max-width: 768px)');
   const isStockPage = page === 'stock';
   const searchRef = useRef<HTMLDivElement>(null);
@@ -245,12 +247,12 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
           <SearchContainer ref={searchRef} style={{flex: 1, margin: 0, gridColumn: 'unset'}}>
             <SearchWrapper>
               <SearchIcon />
-              <SearchBar 
-                value={searchQuery} 
+              <SearchBar
+                value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setShowSuggestions(true)}
-                placeholder="Search inventory..." 
-                autoFocus 
+                placeholder="Search inventory..."
+                autoFocus
               />
             </SearchWrapper>
             {showSuggestions && searchSuggestions.length > 0 && (
@@ -273,7 +275,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
     <HeaderContainer>
       <HeaderContent>
         <ActionsContainer className="left">
-          {!isSidebarOpen && (
+          {!isSidebarOpen && !isMobile && (
             canGoBack ? (
               <HeaderButton onClick={goBack} aria-label="Go back"><ArrowLeftIcon /></HeaderButton>
             ) : (
@@ -281,16 +283,16 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
             )
           )}
         </ActionsContainer>
-        
+
         {showDesktopSearch ? (
           <SearchContainer ref={searchRef}>
             <SearchWrapper>
               <SearchIcon />
-              <SearchBar 
-                value={searchQuery} 
-                onChange={(e) => setSearchQuery(e.target.value)} 
+              <SearchBar
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setShowSuggestions(true)}
-                placeholder="Search inventory..." 
+                placeholder="Search inventory..."
               />
             </SearchWrapper>
             {showSuggestions && searchSuggestions.length > 0 && (
@@ -329,6 +331,9 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                 </HeaderButton>
               )}
             </StockActionsContainer>
+          )}
+          {!isSidebarOpen && isMobile && (
+            <HeaderButton onClick={toggleSidebar} aria-label="Toggle sidebar"><HamburgerIcon /></HeaderButton>
           )}
         </ActionsContainer>
       </HeaderContent>

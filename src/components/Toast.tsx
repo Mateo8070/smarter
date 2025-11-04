@@ -24,16 +24,15 @@ const ToastContainer = styled.div`
 `;
 
 const ToastMessage = styled.div<{ type: 'success' | 'error' | 'info' }>`
-  background-color: ${({ theme, type }) => {
-    if (type === 'success') return theme.success;
-    if (type === 'error') return theme.danger;
-    return theme.textSecondary;
+  background-color: ${({ type }) => {
+    if (type === 'success') return '#28a745';
+    if (type === 'error') return '#dc3545';
+    return '#007bff';
   }};
   color: white;
   padding: 12px 20px;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  opacity: 0.9;
   animation: fadeIn 0.3s ease-out, fadeOut 0.3s ease-out 2.7s forwards;
 
   @keyframes fadeIn {
@@ -42,14 +41,14 @@ const ToastMessage = styled.div<{ type: 'success' | 'error' | 'info' }>`
       transform: translateY(20px);
     }
     to {
-      opacity: 0.9;
+      opacity: 1;
       transform: translateY(0);
     }
   }
 
   @keyframes fadeOut {
     from {
-      opacity: 0.9;
+      opacity: 1;
       transform: translateY(0);
     }
     to {

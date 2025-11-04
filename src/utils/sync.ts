@@ -46,7 +46,9 @@ export const syncWithBackend = async () => {
     }
     if (localAuditLogs.length > 0) {
       console.log('Pushing audit logs:', localAuditLogs);
-      const { error } = await supabase.from('audit_log').insert(localAuditLogs as any);
+      // Create a new array of log objects without the 'is_synced' property
+      const logsToInsert = localAuditLogs.map(({ is_synced, ...rest }) => rest);
+      const { error } = await supabase.from('audit_log').insert(logsToInsert as any);
       if (error) throw new Error(`Failed to send audit logs to the cloud. Details: ${error.message}`);
       pushedCount += localAuditLogs.length;
       // Mark audit logs as synced locally

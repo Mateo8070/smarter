@@ -53,55 +53,55 @@ const CardGrid = styled.div`
 `;
 
 const IconContainer = styled.div`
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: var(--surface-variant);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   transition: all 0.25s ease;
 
   svg {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     color: var(--text-secondary);
     transition: all 0.25s ease;
   }
 
   @media (max-width: 480px) {
-    width: 48px;
-    height: 48px;
-    margin-bottom: 12px;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 8px;
     svg {
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
     }
   }
 `;
 
 const CardLabel = styled.span`
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-primary);
   transition: color 0.25s ease;
 
   @media (max-width: 480px) {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
   }
 `;
 
 const DashboardCard = styled.button`
   background-color: var(--surface);
   border: 1px solid var(--border);
-  padding: 24px;
+  padding: 16px;
   border-radius: 12px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
+  align-items: center;
+  text-align: center;
   transition: all 0.25s ease;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 
@@ -123,7 +123,7 @@ const DashboardCard = styled.button`
   }
   
   @media (max-width: 480px) {
-    padding: 16px;
+    padding: 12px;
   }
 `;
 

@@ -24,8 +24,10 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  /* Ensure the app can stretch to full height and allow internal scrolling
+     on mobile. Previously `display:flex` + `place-items: center` centered
+     the root and prevented children from filling the viewport which broke
+     nested scrolling. */
   min-width: 320px;
   min-height: 100vh;
 }

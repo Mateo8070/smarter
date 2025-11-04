@@ -61,6 +61,7 @@ export const CardView = styled(ContentArea)`
   gap: 24px;
   padding: 24px;
   align-content: start;
+  overflow-y: auto;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -149,6 +150,7 @@ export const Card = styled.div`
 
 export const TableViewContainer = styled(ContentArea)`
   padding: 0 24px 24px;
+  overflow-y: auto;
 
   @media (max-width: 768px) {
     padding: 0 16px 16px;
