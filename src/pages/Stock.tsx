@@ -282,9 +282,9 @@ const Stock: React.FC<StockProps> = (props) => {
     <StockPageContainer>
       <PageHeader isVisible={isHeaderVisible}>
         <FilterContainer>
-          <FilterButton active={!selectedCategoryId} onClick={() => setSelectedCategoryId(null)}>All</FilterButton>
+          <FilterButton $active={!selectedCategoryId} onClick={() => setSelectedCategoryId(null)}>All</FilterButton>
           {categories?.filter(cat => !cat.is_deleted).map(cat => (
-            <FilterButton key={cat.id} active={selectedCategoryId === cat.id} onClick={() => setSelectedCategoryId(cat.id)}>
+            <FilterButton key={cat.id} $active={selectedCategoryId === cat.id} onClick={() => setSelectedCategoryId(cat.id)}>
               {cat.name}
             </FilterButton>
           ))}

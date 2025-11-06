@@ -49,7 +49,7 @@ const SplashScreen = styled.div`
     color: var(--primary);
     animation: ${pulse} 1.5s ease-in-out infinite;
   }
-  
+
   h1 {
     font-size: 28px;
     font-weight: 700;
@@ -66,7 +66,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
-  
+
   // State lifted from Stock page
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setSearchActive] = useState(false);
@@ -163,9 +163,9 @@ function App() {
   const renderPage = () => {
     switch (page) {
       case 'dashboard': return <Dashboard setPage={setPageWithHistory} handleAiClick={handleAiClick} />;
-      case 'stock': return <Stock 
-        setPage={setPageWithHistory} 
-        searchQuery={searchQuery} 
+      case 'stock': return <Stock
+        setPage={setPageWithHistory}
+        searchQuery={searchQuery}
         sortOrder={sortOrder}
         setSortOrder={setSortOrder}
         isDesktop={isDesktop}
@@ -202,7 +202,7 @@ function App() {
               setPage={setPageWithHistory}
               toggleTheme={toggleTheme}
               theme={theme}
-              isSidebarOpen={isSidebarOpen}
+              $isSidebarOpen={isSidebarOpen}
               toggleSidebar={toggleSidebar}
               goBack={goBack}
               canGoBack={pageHistory.length > 1 && page !== 'dashboard'}

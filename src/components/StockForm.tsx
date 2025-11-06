@@ -71,23 +71,23 @@ const CategorySelectorContainer = styled.div`
   &::-webkit-scrollbar { display: none; }
 `;
 
-const CategoryButton = styled.button<{ active?: boolean }>`
+const CategoryButton = styled.button<{ $active?: boolean }>`
   padding: 8px 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
-  background-color: ${({ active }) => (active ? 'var(--primary)' : 'var(--surface-variant)')};
-  color: ${({ active }) => (active ? 'white' : 'var(--text-primary)')};
+  background-color: ${({ $active }) => ($active ? 'var(--primary)' : 'var(--surface-variant)')};
+  color: ${({ $active }) => ($active ? 'white' : 'var(--text-primary)')};
   font-weight: 500;
   font-size: 14px;
   white-space: nowrap;
   flex-shrink: 0;
   transition: all 0.2s ease;
 
-  &:hover {
+    &:hover {
     border-color: var(--primary);
-    background-color: ${({ active }) => (active ? 'var(--primary)' : 'var(--surface)')};
-    color: ${({ active }) => (active ? 'white' : 'var(--text-primary)')};
+    background-color: ${({ $active }) => ($active ? 'var(--primary)' : 'var(--surface)')};
+    color: ${({ $active }) => ($active ? 'white' : 'var(--text-primary)')};
   }
 `;
 
@@ -113,7 +113,7 @@ const parsePriceAndUnit = (priceString: string): { price: number | null, unit: s
   const price = parseFloat(numericPart.replace(/,/g, ''));
 
   const unitPart = priceString.replace(/[\d,./]/g, '').trim();
-  
+
   return {
     price: isNaN(price) ? null : price,
     unit: unitPart || 'each',
@@ -160,7 +160,7 @@ const StockForm: React.FC<StockFormProps> = ({ onSubmit, initialItem, categories
     e.preventDefault();
     const { price: retailPrice, unit: retailUnit } = parsePriceAndUnit(item.retail_price as any || '');
     const { price: wholesalePrice, unit: wholesaleUnit } = parsePriceAndUnit(item.wholesale_price as any || '');
-    
+
     const submissionData: Partial<Hardware> = {
       ...item,
       retail_price: retailPrice,
@@ -185,7 +185,7 @@ const StockForm: React.FC<StockFormProps> = ({ onSubmit, initialItem, categories
             required
         />
       </FullWidthInputGroup>
-      
+
       <InputGrid>
         <FullWidthInputGroup as={InputGroup}>
             <Label>Category</Label>
@@ -194,7 +194,7 @@ const StockForm: React.FC<StockFormProps> = ({ onSubmit, initialItem, categories
                     <CategoryButton
                         key={cat.id}
                         type="button"
-                        active={item.category_id === cat.id}
+                        $active={item.category_id === cat.id}
                         onClick={() => setItem(prev => ({ ...prev, category_id: cat.id }))}
                     >
                         {cat.name}

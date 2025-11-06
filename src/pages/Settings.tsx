@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useDb } from '../hooks/useDb';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useToast } from '../components/Toast';
+import { syncToLocalBackend } from '../utils/sync';
 import {
   SettingsPageContainer,
   SettingsCard,
@@ -27,6 +28,15 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleSync = async () => {
+    try {
+      await syncToLocalBackend();
+      addToast('Sync with backend successful!', 'success');
+    } catch (error) {
+      addToast('Failed to sync with backend.', 'error');
+    }
+  };
+
   return (
     <SettingsPageContainer>
       <SettingsCard>
@@ -36,6 +46,9 @@ const Settings: React.FC = () => {
         </SettingsParagraph>
         <ClearDatabaseButton onClick={() => setShowConfirmModal(true)}>
           Clear Local Database
+        </ClearDatabaseButton>
+        <ClearDatabaseButton onClick={handleSync} style={{ marginLeft: '10px' }}>
+          Sync with Backend
         </ClearDatabaseButton>
       </SettingsCard>
 

@@ -155,10 +155,10 @@ const ViewModeContainer = styled.div`
   padding: 4px;
 `;
 
-const ViewModeButton = styled(HeaderButton)<{ active?: boolean }>`
-  background-color: ${({ active }) => active ? 'var(--surface)' : 'transparent'};
-  color: ${({ active }) => active ? 'var(--primary)' : 'var(--text-secondary)'};
-  box-shadow: ${({ active }) => active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'};
+const ViewModeButton = styled(HeaderButton)<{ $active?: boolean }>`
+  background-color: ${({ $active }) => $active ? 'var(--surface)' : 'transparent'};
+  color: ${({ $active }) => $active ? 'var(--primary)' : 'var(--text-secondary)'};
+  box-shadow: ${({ $active }) => $active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'};
   border-radius: 6px;
   padding: 6px;
 
@@ -178,7 +178,7 @@ interface AppHeaderProps {
   toggleSidebar: () => void;
   goBack: () => void;
   canGoBack: boolean;
-  isSidebarOpen: boolean;
+  $isSidebarOpen: boolean;
   page: string;
   isSearchActive: boolean;
   setSearchActive: (active: boolean) => void;
@@ -195,7 +195,7 @@ interface AppHeaderProps {
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
   const {
-    pageTitle, toggleSidebar, goBack, canGoBack, isSidebarOpen, page,
+    pageTitle, toggleSidebar, goBack, canGoBack, $isSidebarOpen, page,
     isSearchActive, setSearchActive, searchQuery, setSearchQuery,
     hardware, openSortModal,
     viewMode, setViewMode, showSuggestions, setShowSuggestions
@@ -275,7 +275,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
     <HeaderContainer>
       <HeaderContent>
         <ActionsContainer className="left">
-          {!isSidebarOpen && !isMobile && (
+          {!$isSidebarOpen && !isMobile && (
             canGoBack ? (
               <HeaderButton onClick={goBack} aria-label="Go back"><ArrowLeftIcon /></HeaderButton>
             ) : (
@@ -314,10 +314,10 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
             <StockActionsContainer>
                {!isMobile && (
                 <ViewModeContainer>
-                  <ViewModeButton active={viewMode === 'card'} onClick={() => setViewMode('card')} aria-label="Card view">
+                  <ViewModeButton $active={viewMode === 'card'} onClick={() => setViewMode('card')} aria-label="Card view">
                     <LayoutGridIcon />
                   </ViewModeButton>
-                  <ViewModeButton active={viewMode === 'table'} onClick={() => setViewMode('table')} aria-label="Table view">
+                  <ViewModeButton $active={viewMode === 'table'} onClick={() => setViewMode('table')} aria-label="Table view">
                     <ListIcon />
                   </ViewModeButton>
                 </ViewModeContainer>
@@ -332,7 +332,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
               )}
             </StockActionsContainer>
           )}
-          {!isSidebarOpen && isMobile && (
+          {!$isSidebarOpen && isMobile && (
             <HeaderButton onClick={toggleSidebar} aria-label="Toggle sidebar"><HamburgerIcon /></HeaderButton>
           )}
         </ActionsContainer>

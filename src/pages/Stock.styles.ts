@@ -32,13 +32,13 @@ export const FilterContainer = styled.div`
   &::-webkit-scrollbar { display: none; }
 `;
 
-export const FilterButton = styled.button<{ active?: boolean }>`
+export const FilterButton = styled.button<{ $active?: boolean }>`
   padding: 6px 16px;
   border: 1px solid var(--border);
   border-radius: 20px;
   cursor: pointer;
-  background-color: ${({ active }) => (active ? 'var(--primary)' : 'transparent')};
-  color: ${({ active }) => (active ? 'white' : 'var(--text-primary)')};
+  background-color: ${({ $active }) => ($active ? 'var(--primary)' : 'transparent')};
+  color: ${({ $active }) => ($active ? 'white' : 'var(--text-primary)')};
   font-weight: 500;
   font-size: 14px;
   white-space: nowrap;

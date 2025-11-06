@@ -18,7 +18,7 @@ import {
   VolumeXIcon,
 } from './Icons';
 
-const SidebarContainer = styled.aside<{ isSidebarOpen: boolean }>`
+const SidebarContainer = styled.aside<{ $isSidebarOpen: boolean }>`
   width: 260px;
   border-right: 1px solid var(--border);
   background-color: var(--surface);
@@ -28,17 +28,17 @@ const SidebarContainer = styled.aside<{ isSidebarOpen: boolean }>`
   left: 0;
   height: 100%;
   z-index: 1100;
-  transform: translateX(${({ isSidebarOpen }) => (isSidebarOpen ? '0' : '-100%')});
+  transform: translateX(${({ $isSidebarOpen }) => ($isSidebarOpen ? '0' : '-100%')});
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  
+
   @media (max-width: 768px) {
     width: 100%;
     left: auto;
     right: 0;
-    transform: translateX(${({ isSidebarOpen }) => (isSidebarOpen ? '0' : '100%')});
-    box-shadow: ${({ isSidebarOpen }) => (isSidebarOpen ? '0 10px 30px rgba(0,0,0,0.1)' : 'none')};
+    transform: translateX(${({ $isSidebarOpen }) => ($isSidebarOpen ? '0' : '100%')});
+    box-shadow: ${({ $isSidebarOpen }) => ($isSidebarOpen ? '0 10px 30px rgba(0,0,0,0.1)' : 'none')};
   }
 `;
 
@@ -79,7 +79,7 @@ const CloseButton = styled.button`
   cursor: pointer;
   color: var(--text-secondary);
   transition: background-color 0.2s, color 0.2s;
-  
+
   &:hover {
     background-color: var(--background);
     color: var(--text-primary);
@@ -180,18 +180,12 @@ const FooterLink = styled.button`
 `;
 
 const Sidebar: React.FC<{
-
-  setPage: (page: string) => void;
-
+  setPage: (page: string, payload?: any) => void;
   toggleTheme: () => void;
-
-  isSidebarOpen: boolean;
-
+  $isSidebarOpen: boolean;
   toggleSidebar: () => void;
-
   handleAiClick: () => void;
-
-}> = ({ setPage, toggleTheme, isSidebarOpen, toggleSidebar, handleAiClick }) => {
+}> = ({ setPage, toggleTheme, $isSidebarOpen, toggleSidebar, handleAiClick }) => {
 
   const theme = useTheme();
 
@@ -226,8 +220,7 @@ const Sidebar: React.FC<{
 
 
   return (
-
-    <SidebarContainer isSidebarOpen={isSidebarOpen}>
+    <SidebarContainer $isSidebarOpen={$isSidebarOpen}>
 
       <SidebarHeader>
 

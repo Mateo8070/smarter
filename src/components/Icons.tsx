@@ -114,3 +114,7 @@ export const Volume2Icon = (props: React.SVGProps<SVGSVGElement>) => (
 export const VolumeXIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...iconProps} {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
 );
+
+export const ClearIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...iconProps} {...props}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+);

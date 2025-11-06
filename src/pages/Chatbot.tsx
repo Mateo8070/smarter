@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
-import { GoogleGenAI, type FunctionDeclaration, Type, type Content, type Part, type Chat } from '@google/genai';
-import { SendIcon, BotIcon, MicrophoneIcon, StopCircleIcon } from '../components/Icons';
-import { useDb } from '../hooks/useDb';
-import { db } from '../db/db';
-import type { Hardware } from '../types/database';
+import { type Content } from '@google/generative-ai';
+import { SendIcon, BotIcon, MicrophoneIcon, StopCircleIcon, ClearIcon } from '../components/Icons';
 import { parseMarkdownToReact } from '../utils/markdown';
+import { useDb } from '../hooks/useDb';
+import { Card, CardView } from '../pages/Stock.styles';
 
 // --- Minimal type definitions for Web Speech API ---
 interface SpeechRecognitionEvent {
@@ -15,6 +14,7 @@ interface SpeechRecognitionEvent {
       [key: number]: {
         transcript: string;
       };
+      isFinal?: boolean;
     };
     length: number;
   };
@@ -33,118 +33,15 @@ interface SpeechRecognition {
   stop: () => void;
 }
 
-// --- AI Client Initialization ---
-let genAI: GoogleGenAI | null = null;
-const getAiClient = (): GoogleGenAI | null => {
-  if (genAI) return genAI;
-  const key = process.env.API_KEY;
-  if (!key) {
-    console.warn('API_KEY not found in environment variables.');
-    return null;
-  }
-  try {
-    genAI = new GoogleGenAI({ apiKey: key });
-    return genAI;
-  } catch (err) {
-    console.error('Failed to initialize GoogleGenAI:', err);
-    return null;
-  }
-};
-
 const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-// --- Tool Declarations ---
-const searchStockItemsDeclaration: FunctionDeclaration = {
-  name: 'searchStockItems',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Searches the inventory database for stock items.',
-    properties: {
-      itemNameOrDescription: { type: Type.STRING, description: 'Name or keyword to search for.' },
-      categoryName: { type: Type.STRING, description: 'Filter by category name.' },
-      sortBy: { type: Type.STRING, description: 'Sort by: description, retail_price, quantity.' },
-      sortOrder: { type: Type.STRING, description: 'asc or desc. Default: asc.' },
-    },
-    required: [],
-  },
-};
-
-const addHardwareDeclaration: FunctionDeclaration = {
-  name: 'addHardware',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Adds a new hardware item.',
-    properties: {
-      description: { type: Type.STRING },
-      category_id: { type: Type.STRING },
-      quantity: { type: Type.STRING },
-      retail_price: { type: Type.NUMBER },
-      retail_price_unit: { type: Type.STRING },
-      wholesale_price: { type: Type.NUMBER },
-      wholesale_price_unit: { type: Type.STRING },
-      supplier: { type: Type.STRING },
-      min_stock_level: { type: Type.NUMBER },
-      location: { type: Type.STRING },
-      notes: { type: Type.STRING },
-    },
-    required: ['description', 'category_id', 'quantity', 'retail_price'],
-  },
-};
-
-const updateHardwareDeclaration: FunctionDeclaration = {
-  name: 'updateHardware',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Updates an existing item.',
-    properties: {
-      id: { type: Type.STRING },
-      description: { type: Type.STRING },
-      category_id: { type: Type.STRING },
-      quantity: { type: Type.STRING },
-      retail_price: { type: Type.NUMBER },
-      retail_price_unit: { type: Type.STRING },
-      wholesale_price: { type: Type.NUMBER },
-      wholesale_price_unit: { type: Type.STRING },
-      supplier: { type: Type.STRING },
-      min_stock_level: { type: Type.NUMBER },
-      location: { type: Type.STRING },
-      notes: { type: Type.STRING },
-    },
-    required: ['id'],
-  },
-};
-
-const deleteHardwareDeclaration: FunctionDeclaration = {
-  name: 'deleteHardware',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Marks an item as deleted.',
-    properties: { id: { type: Type.STRING } },
-    required: ['id'],
-  },
-};
-
-const addAuditLogDeclaration: FunctionDeclaration = {
-  name: 'addAuditLog',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Logs an action.',
-    properties: {
-      item_id: { type: Type.STRING },
-      change_description: { type: Type.STRING },
-      username: { type: Type.STRING },
-    },
-    required: ['item_id', 'change_description'],
-  },
-};
-
 // --- Styled Components ---
-const ChatPageContainer = styled.div<{ isModal?: boolean }>`
+const ChatPageContainer = styled.div<{ $isModal?: boolean }>`
   display: flex;
   flex-direction: column;
   height: 100%;
   flex: 1;
-  max-height: ${({ isModal }) => isModal ? '90vh' : '100%'};
+  max-height: ${({ $isModal }) => $isModal ? '90vh' : '100%'};
 `;
 
 const MessagesContainer = styled.div`
@@ -157,41 +54,103 @@ const MessagesContainer = styled.div`
   gap: 12px;
 `;
 
-const MessageBubble = styled.div<{ isUser: boolean }>`
-  align-self: ${props => props.isUser ? 'flex-end' : 'flex-start'};
-  max-width: 90%;
-  padding: 10px 14px;
-  border-radius: 18px;
-  background-color: ${props => props.isUser ? 'var(--primary)' : 'var(--surface)'};
-  color: ${props => props.isUser ? 'white' : 'var(--text-primary)'};
-  border: 1px solid ${props => props.isUser ? 'var(--primary)' : 'var(--border)'};
+const UserMessage = styled.div`
+  max-width: 100%;
+  padding: 16px;
+  background-color: var(--surface-variant);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  word-wrap: break-word;
+`;
+
+const AIMessageContainer = styled.div`
+  max-width: 100%;
+  padding: 16px;
+  background-color: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   font-size: 15px;
   line-height: 1.5;
   word-wrap: break-word;
 
-  & table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1em 0;
-    font-size: 14px;
-    background-color: var(--background);
-    color: var(--text-primary);
-  }
-  & th, & td {
-    border: 1px solid var(--border);
-    padding: 8px;
-    text-align: left;
-  }
-  & th {
-    background-color: var(--surface-variant);
-    font-weight: 600;
+  &.error {
+    background-color: var(--danger-surface);
+    border-color: var(--danger);
+    color: var(--danger);
   }
 `;
 
-const LoadingBubble = styled.div`
-  align-self: flex-start;
-  padding: 12px 16px;
-  border-radius: 18px;
+const AICard = styled.div`
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.5;
+  word-wrap: break-word;
+
+  &.error {
+    background-color: var(--danger-surface);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+`;
+
+const CardContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+`;
+
+const TableWrapper = styled.div`
+  overflow-x: auto; /* Enable horizontal scrolling */
+  width: 100%;
+  margin-top: 10px;
+  border-radius: 8px;
+  /* Remove outer border so table uses single, collapsed borders for a cleaner look */
+  background-color: transparent;
+`;
+
+const ItemTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px; /* Ensure table is wide enough for scrolling */
+
+  th, td {
+    border: 1px solid var(--border);
+    padding: 8px;
+    text-align: left;
+    white-space: nowrap; /* Prevent text wrapping */
+  }
+
+  th {
+    background-color: var(--surface-variant);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  td {
+    color: var(--text-secondary);
+  }
+`;
+
+const ResponseWrapper = styled.div`
+  width: 100%;
+  margin-bottom: 12px;
+`;
+
+const LoadingMessage = styled.div`
+  padding: 16px;
+  border-radius: 8px;
   background-color: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-secondary);
@@ -231,7 +190,7 @@ const ChatInput = styled.textarea`
   scrollbar-width: none;
   &:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.primary}33;
+    box-shadow: 0 0 0 2px ${({ theme }) => (theme as any).primary}33;
   }
 `;
 
@@ -251,6 +210,7 @@ const MicButton = styled.button`
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s, color 0.2s;
+  z-index: 1; /* Ensure button is above textarea */
   &:hover:not(:disabled) {
     background-color: var(--background);
     color: var(--text-primary);
@@ -280,6 +240,27 @@ const SendButton = styled.button`
   }
 `;
 
+const ClearButton = styled.button`
+  background-color: var(--surface-variant);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  &:hover {
+    background-color: var(--background);
+    color: var(--text-primary);
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
 const WelcomeScreen = styled.div`
   display: flex;
   flex-direction: column;
@@ -299,19 +280,35 @@ interface ChatbotProps {
 }
 
 const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
-  const { hardware, categories, addHardware: dbAddHardware, updateHardware: dbUpdateHardware, deleteHardware: dbDeleteHardware, addAuditLog: dbAddAuditLog } = useDb();
-  const [messages, setMessages] = useState<Content[]>([]);
+  // --- Custom Message Type for Structured Responses ---
+interface CustomAIMessage {
+  role: 'model';
+  customData: {
+    success: boolean;
+    type: 'query_result' | 'natural_language' | 'error';
+    message?: string;
+    text?: string;
+    data?: any[];
+  };
+}
+
+type Message = Content | CustomAIMessage;
+
+const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const aiClient = useRef(getAiClient());
-  const chatRef = useRef<Chat | null>(null);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const { categories } = useDb();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const handleClear = () => {
+    setMessages([]);
+  };
 
   // --- Speech Recognition ---
   const toggleListen = () => {
@@ -323,183 +320,50 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
     }
   };
 
+  const handleError = (error: Event | SpeechRecognitionErrorEvent | string) => {
+    console.error("Speech recognition error:", error);
+    setIsListening(false);
+    let errorMessage = "An unknown speech recognition error occurred.";
+    if (error instanceof Event && 'error' in error && typeof error.error === 'string') {
+      errorMessage = error.error;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
+    setMessages(prev => [...prev, { role: 'model', customData: { success: false, type: 'error', message: `Speech Error: ${errorMessage}` } }]);
+  };
+
   const handleListen = () => {
     if (!SpeechRecognitionAPI) {
-      alert("Speech recognition not supported.");
+      alert("Speech recognition not supported in this browser.");
       return;
     }
     if (!recognitionRef.current) {
       const recognition = new SpeechRecognitionAPI();
-      recognition.continuous = false;
-      recognition.interimResults = true;
+      recognition.continuous = false; // Only capture a single phrase
+      recognition.interimResults = true; // Get interim results
       recognition.lang = 'en-US';
 
-      recognition.onresult = (event) => {
-        let final = '';
-        let interim = '';
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        let interimTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) final += transcript;
-          else interimлювати += transcript;
+          if (event.results[i].isFinal) {
+            setInput(prev => prev + event.results[i][0].transcript); // Append final results
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
         }
-        setInput(final || interim);
+        // Display interim results in the input field prefix (optional, requires state)
+        // For now, only final results are appended to the input for confirmation
       };
 
       recognition.onend = () => setIsListening(false);
-      recognition.onerror = () => setIsListening(false);
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => handleError(event);
       recognitionRef.current = recognition;
     }
-    setInput('');
+    setInput(''); // Clear input at the start of listening
     recognitionRef.current.start();
     setIsListening(true);
   };
-
-  // --- Tool: searchStockItems ---
-  const searchStockItems = async (args: any): Promise<{ result: any[] } | { error: string }> => {
-    const parsed = typeof args === 'string' ? JSON.parse(args) : args || {};
-    let results: Hardware[] = [];
-
-    if (hardware?.length) {
-      results = hardware.filter(h => !h.is_deleted);
-    } else {
-      try {
-        const items = await db.hardware.toArray();
-        results = items.filter(h => !h.is_deleted);
-      } catch (err: any) {
-        return { error: `DB error: ${err.message}` };
-      }
-    }
-
-    if (parsed.categoryName) {
-      const cat = categories?.find(c => c.name.toLowerCase() === parsed.categoryName.toLowerCase());
-      if (!cat) return { error: `Category '${parsed.categoryName}' not found.` };
-      results = results.filter(i => i.category_id === cat.id);
-    }
-
-    if (parsed.itemNameOrDescription) {
-      const term = parsed.itemNameOrDescription.toLowerCase();
-      results = results.filter(i => i.description?.toLowerCase().includes(term));
-    }
-
-    if (parsed.sortBy) {
-      const order = parsed.sortOrder === 'desc' ? -1 : 1;
-      results.sort((a, b) => {
-        switch (parsed.sortBy) {
-          case 'description': return a.description.localeCompare(b.description) * order;
-          case 'retail_price': return ((a.retail_price || 0) - (b.retail_price || 0)) * order;
-          case 'quantity':
-            const qa = parseInt(a.quantity || '0', 10);
-            const qb = parseInt(b.quantity || '0', 10);
-            return (qa - qb) * order;
-          default: return 0;
-        }
-      });
-    }
-
-    return {
-      result: results.slice(0, 20).map(item => ({
-        description: item.description,
-        category: categories?.find(c => c.id === item.category_id)?.name || 'N/A',
-        quantity: item.quantity,
-        retail_price: item.retail_price,
-      }))
-    };
-  };
-
-  // --- Tool: addHardware ---
-  const addHardware = async (args: any): Promise<{ success: string } | { error: string }> => {
-    if (!dbAddHardware || !dbAddAuditLog) return { error: 'DB not ready.' };
-    try {
-      const newItem: Hardware = {
-        id: crypto.randomUUID(),
-        updated_at: new Date().toISOString(),
-        is_deleted: false,
-        ...args,
-      };
-      await dbAddHardware(newItem);
-      await dbAddAuditLog({
-        id: crypto.randomUUID(),
-        item_id: newItem.id,
-        change_description: `AI added: ${newItem.description}`,
-        created_at: new Date().toISOString(),
-        username: 'AI Assistant',
-        is_synced: 0,
-      });
-      return { success: `Added: ${newItem.description} (ID: ${newItem.id})` };
-    } catch (err: any) {
-      return { error: err.message };
-    }
-  };
-
-  // --- Tool: updateHardware ---
-  const updateHardware = async (args: any): Promise<{ success: string } | { error: string }> => {
-    if (!dbUpdateHardware || !dbAddAuditLog) return { error: 'DB not ready.' };
-    try {
-      const { id, ...updates } = args;
-      await dbUpdateHardware(id, { ...updates, updated_at: new Date().toISOString() });
-      await dbAddAuditLog({
-        id: crypto.randomUUID(),
-        item_id: id,
-        change_description: `AI updated: ${JSON.stringify(updates)}`,
-        created_at: new Date().toISOString(),
-        username: 'AI Assistant',
-        is_synced: 0,
-      });
-      return { success: `Updated item ID: ${id}` };
-    } catch (err: any) {
-      return { error: err.message };
-    }
-  };
-
-  // --- Tool: deleteHardware ---
-  const deleteHardware = async (args: { id: string }): Promise<{ success: string } | { error: string }> => {
-    if (!dbDeleteHardware || !dbAddAuditLog) return { error: 'DB not ready.' };
-    try {
-      await dbDeleteHardware(args.id);
-      await dbAddAuditLog({
-        id: crypto.randomUUID(),
-        item_id: args.id,
-        change_description: `AI deleted item ID: ${args.id}`,
-        created_at: new Date().toISOString(),
-        username: 'AI Assistant',
-        is_synced: 0,
-      });
-      return { success: `Deleted item ID: ${args.id}` };
-    } catch (err: any) {
-      return { error: err.message };
-    }
-  };
-
-  // --- Tool: addAuditLog ---
-  const addAuditLog = async (args: any): Promise<{ success: string } | { error: string }> => {
-    if (!dbAddAuditLog) return { error: 'DB not ready.' };
-    try {
-      const log = {
-        id: crypto.randomUUID(),
-        created_at: new Date().toISOString(),
-        is_synced: 0,
-        username: args.username || 'AI Assistant',
-        ...args,
-      };
-      await dbAddAuditLog(log);
-      return { success: `Logged action for item ${args.item_id}` };
-    } catch (err: any) {
-      return { error: err.message };
-    }
-  };
-
-  // --- AI Client Guard ---
-  if (!aiClient.current) {
-    return (
-      <ChatPageContainer isModal={isModal}>
-        <WelcomeScreen>
-          <BotIcon />
-          <h2>AI Assistant Unavailable</h2>
-          <p>Please set API_KEY in environment.</p>
-        </WelcomeScreen>
-      </ChatPageContainer>
-    );
-  }
 
   // --- Handle Send ---
   const handleSend = async (e: React.FormEvent) => {
@@ -507,78 +371,47 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
     if (!input.trim() || isLoading) return;
 
     const userText = input;
-    setMessages(prev => [...prev, { role: 'user', parts: [{ text: userText }] }]);
+    // Map current messages to the format expected by the backend (Content[])
+    const historyForBackend: Content[] = messages.map(msg => {
+      if ('customData' in msg) {
+        // If it's a custom AI message, convert it back to a simple 'model' text part for history
+        return { role: 'model', parts: [{ text: msg.customData.text || msg.customData.message || '' }] };
+      }
+      return msg; // Already in Content format
+    });
+
+    const newMessages: Message[] = [...messages, { role: 'user', parts: [{ text: userText }] }];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
     try {
-      if (!chatRef.current) {
-        const systemInstruction = `You are an AI assistant for a hardware store. Use tools to search, add, update, or delete inventory. Respond with JSON tool calls when needed. Format results as Markdown tables.`;
-        chatRef.current = aiClient.current!.chats.create({
-          model: 'gemini-1.5-flash',
-          config: { systemInstruction },
-          tools: [{ functionDeclarations: [searchStockItemsDeclaration, addHardwareDeclaration, updateHardwareDeclaration, deleteHardwareDeclaration, addAuditLogDeclaration] }],
-        });
-      }
+    // Include the latest user message in the history sent to the backend
+    const historyPayload = [
+      ...historyForBackend,
+      { role: 'user', parts: [{ text: userText }] },
+    ];
 
-      const chat = chatRef.current;
-      let response = await chat.sendMessage(userText);
+    const response = await fetch('http://localhost:3002/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ history: historyPayload }),
+    });
 
-      // --- Handle Tool Calls ---
-      let toolCall = null;
-      const textResponse = typeof response.text === 'function' ? response.text() : response.text;
-
-      if (textResponse) {
-        try {
-          const json = JSON.parse(textResponse);
-          if (json.tool_call?.name) {
-            toolCall = { name: json.tool_call.name, args: json.tool_call.args };
-          }
-        } catch {}
-      }
-
-      const nativeCalls = typeof response.functionCalls === 'function' ? response.functionCalls() : response.functionCalls;
-      if (nativeCalls?.length > 0) {
-        toolCall = { name: nativeCalls[0].name, args: nativeCalls[0].args };
-      }
-
-      if (toolCall) {
-        let result: any;
-        switch (toolCall.name) {
-          case 'searchStockItems': result = await searchStockItems(toolCall.args); break;
-          case 'addHardware': result = await addHardware(toolCall.args); break;
-          case 'updateHardware': result = await updateHardware(toolCall.args); break;
-          case 'deleteHardware': result = await deleteHardware(toolCall.args); break;
-          case 'addAuditLog': result = await addAuditLog(toolCall.args); break;
-          default: result = { error: 'Unknown tool' };
+        if (!response.ok) {
+            const errorData = await response.json();
+            setMessages(prev => [...prev, { role: 'model', customData: { success: false, type: 'error', message: errorData.message || 'An unknown error occurred on the server.' } }]);
+            return;
         }
 
-        if (result.error) {
-          setMessages(prev => [...prev, { role: 'model', parts: [{ text: `Error: ${result.error}` }] }]);
-          setIsLoading(false);
-          return;
-        }
-
-        const functionResponsePart: Part = {
-          functionResponse: {
-            name: toolCall.name,
-            response: result // Already { result: [...] } or { success: ... }
-          }
-        };
-
-        response = await chat.sendMessage([
-          { role: 'user', parts: [functionResponsePart] }
-        ]);
-      }
-
-      // --- Final Response ---
-      const finalText = typeof response.text === 'function' ? response.text() : response.text;
-      const reply = finalText?.trim() || "No response generated.";
-      setMessages(prev => [...prev, { role: 'model', parts: [{ text: reply }] }]);
+        const data = await response.json();
+        setMessages(prev => [...prev, { role: 'model', customData: data }]);
 
     } catch (err: any) {
-      console.error("[AI Error]", err);
-      setMessages(prev => [...prev, { role: 'model', parts: [{ text: `AI Error: ${err.message}` }] }]);
+      console.error("[API Error]", err);
+      setMessages(prev => [...prev, { role: 'model', customData: { success: false, type: 'error', message: `API Error: ${err.message}` } }]);
     } finally {
       setIsLoading(false);
     }
@@ -592,7 +425,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
   };
 
   return (
-    <ChatPageContainer isModal={isModal}>
+    <ChatPageContainer $isModal={isModal}>
+
       <MessagesContainer>
         {messages.length === 0 && !isLoading && (
           <WelcomeScreen>
@@ -602,13 +436,135 @@ const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
           </WelcomeScreen>
         )}
         {messages.map((msg, i) => {
-          const part = msg.parts[0];
-          if (part?.text) {
-            return <MessageBubble key={i} isUser={msg.role === 'user'}>{parseMarkdownToReact(part.text)}</MessageBubble>;
+          if (msg.role === 'user' && 'parts' in msg && msg.parts && msg.parts.length > 0) {
+            return (
+              <ResponseWrapper key={i}>
+                <UserMessage>{parseMarkdownToReact(msg.parts[0].text || '')}</UserMessage>
+              </ResponseWrapper>
+            );
+          }
+          // Only render model responses; show the immediately preceding user prompt above them
+          if (msg.role === 'model' && 'customData' in msg) {
+            const { type, message, text, data } = msg.customData;
+            const respType = type ?? (text ? 'natural_language' : (data ? 'query_result' : undefined));
+
+            // --- Query result rendering ---
+            if (respType === 'query_result' && data && Array.isArray(data)) {
+              if (data.length > 3) {
+                // For larger results show a horizontally-scrollable table within an AICard
+                const excluded = ['id', 'is_deleted', 'updated_at', 'created_at', 'updated_by'];
+                const relevantHeaders = data.length > 0 ? Object.keys(data[0]).filter(k => !excluded.includes(k)) : [];
+
+                return (
+                  <ResponseWrapper key={i}>
+                    <AICard>
+                      {message && <p>{message}</p>}
+                      <TableWrapper>
+                        <ItemTable>
+                          <thead>
+                            <tr>
+                              {relevantHeaders.map(header => <th key={header}>{header}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.map((item, idx) => (
+                              <tr key={idx}>
+                                {relevantHeaders.map(header => (
+                                  <td key={header}>{item[header]}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </ItemTable>
+                      </TableWrapper>
+                    </AICard>
+                  </ResponseWrapper>
+                );
+              } else {
+                // For smaller results, display individual ItemCards
+                return (
+                  <ResponseWrapper key={i}>
+                    <CardContainer>
+                      {data.map((item, idx) => {
+                        const category = categories?.find(c => c.id === item.category_id);
+                        return (
+                          <Card key={idx}>
+                            <div className="card-header">
+                              <span className="description">{item.description}</span>
+                              {category && <span className="category-tag" style={{'--category-color': category.color} as React.CSSProperties}>{category.name}</span>}
+                            </div>
+                            <div className="card-body">
+                              <div className="detail-item">
+                                <span className="detail-label">Qty</span>
+                                <span className="detail-value">{item.quantity || 'N/A'}</span>
+                              </div>
+                              <div className="detail-item">
+                                <span className="detail-label">Retail</span>
+                                <span className="detail-value">
+                                  MK {item.retail_price?.toLocaleString() ?? 'N/A'}
+                                  {item.retail_price_unit && <span className="price-unit">/ {item.retail_price_unit}</span>}
+                                </span>
+                              </div>
+                              <div className="detail-item">
+                                <span className="detail-label">Wholesale</span>
+                                <span className="detail-value">
+                                  MK {item.wholesale_price?.toLocaleString() ?? 'N/A'}
+                                  {item.wholesale_price_unit && <span className="price-unit">/ {item.wholesale_price_unit}</span>}
+                                </span>
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </CardContainer>
+                  </ResponseWrapper>
+                );
+              }
+            }
+
+            // --- Natural language rendering ---
+            if (respType === 'natural_language' && text) {
+              const looksLikeHtml = /<[^>]+>/.test(text.trim());
+              const containsTable = /<table/i.test(text.trim());
+              return (
+                <ResponseWrapper key={i}>
+                  <AICard>
+                    {looksLikeHtml ? (
+                      containsTable ? (
+                        <TableWrapper>
+                          <div dangerouslySetInnerHTML={{ __html: text }} />
+                        </TableWrapper>
+                      ) : (
+                        <div dangerouslySetInnerHTML={{ __html: text }} />
+                      )
+                    ) : (
+                      parseMarkdownToReact(text)
+                    )}
+                  </AICard>
+                </ResponseWrapper>
+              );
+            }
+
+            // --- Error or empty results ---
+            if (type === 'error' && message) {
+              return (
+                <ResponseWrapper key={i}>
+                  <AICard className="error">{parseMarkdownToReact(message)}</AICard>
+                </ResponseWrapper>
+              );
+            }
+
+            if (respType === 'query_result' && data && data.length === 0) {
+              return (
+                <ResponseWrapper key={i}>
+                  <AICard>{message || 'No results found.'}</AICard>
+                </ResponseWrapper>
+              );
+            }
           }
           return null;
         })}
-        {isLoading && <LoadingBubble>Thinking...</LoadingBubble>}
+        {isLoading && <LoadingMessage>Thinking...</LoadingMessage>}
         <div ref={messagesEndRef} />
       </MessagesContainer>
 

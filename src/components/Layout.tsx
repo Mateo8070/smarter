@@ -11,8 +11,8 @@ const LayoutContainer = styled.div`
 `;
 
 const ContentWrapper = styled.div.withConfig({
-  shouldForwardProp: (prop) => !['isSidebarOpen'].includes(prop),
-})<{ isSidebarOpen: boolean }>`
+  shouldForwardProp: (prop) => !['$isSidebarOpen'].includes(prop),
+})<{ $isSidebarOpen: boolean }>`
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -21,7 +21,7 @@ const ContentWrapper = styled.div.withConfig({
   min-height: 0; /* allow children with overflow to shrink inside this flex parent */
 
   @media (min-width: 769px) {
-    margin-left: ${({ isSidebarOpen }) => (isSidebarOpen ? '260px' : '0')};
+    margin-left: ${({ $isSidebarOpen }) => ($isSidebarOpen ? '260px' : '0')};
   }
 `;
 
@@ -40,7 +40,7 @@ interface LayoutProps {
   setPage: (page: string) => void;
   toggleTheme: () => void;
   theme: 'light' | 'dark';
-  isSidebarOpen: boolean;
+  $isSidebarOpen: boolean;
   toggleSidebar: () => void;
   goBack: () => void;
   canGoBack: boolean;
@@ -63,7 +63,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = (props) => {
   const {
-    children, pageTitle, setPage, toggleTheme, theme, isSidebarOpen, toggleSidebar, goBack, canGoBack, page,
+    children, pageTitle, setPage, toggleTheme, theme, $isSidebarOpen, toggleSidebar, goBack, canGoBack, page,
     isSearchActive, setSearchActive, searchQuery, setSearchQuery, hardware,
     openSortModal, isHeaderVisible, setIsHeaderVisible, viewMode, setViewMode,
     showSuggestions, setShowSuggestions, handleAiClick, mainContentRef
@@ -105,17 +105,17 @@ const Layout: React.FC<LayoutProps> = (props) => {
       <Sidebar
         setPage={setPage}
         toggleTheme={toggleTheme}
-        isSidebarOpen={isSidebarOpen}
+        $isSidebarOpen={$isSidebarOpen}
         toggleSidebar={toggleSidebar}
         handleAiClick={handleAiClick}
       />
-      <ContentWrapper isSidebarOpen={isSidebarOpen}>
+      <ContentWrapper $isSidebarOpen={$isSidebarOpen}>
         <AppHeader
           pageTitle={pageTitle}
           toggleSidebar={toggleSidebar}
           goBack={goBack}
           canGoBack={canGoBack}
-          isSidebarOpen={isSidebarOpen}
+          $isSidebarOpen={$isSidebarOpen}
           page={page}
           isSearchActive={isSearchActive}
           setSearchActive={setSearchActive}

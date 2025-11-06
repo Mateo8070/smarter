@@ -1,7 +1,9 @@
-
 import Dexie from 'dexie';
 import { db } from '../db/db';
 import { supabase } from '../services/supabase';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { useEffect, useRef } from 'react';
+import { useToast } from '../components/Toast';
 
 export const syncWithBackend = async () => {
   console.log('--- Starting Sync ---');
@@ -146,5 +148,103 @@ export const syncWithBackend = async () => {
   localStorage.setItem('lastSyncedAt', newSyncedAt);
   console.log('Last Synced At updated to:', newSyncedAt);
 
-  console.log('--- Sync Complete! Pushed:', pushedCount, 'Pulled:', pulledCount, '---');
-};
+      console.log('--- Sync Complete! Pushed:', pushedCount, 'Pulled:', pulledCount, '---');
+  };
+
+  export const syncToLocalBackend = async () => {
+    console.log('--- Starting Sync with local backend ---');
+
+    try {
+      const categories = await db.categories.toArray();
+      const hardware = await db.hardware.toArray();
+      const notes = await db.notes.toArray();
+      const audit_logs = await db.audit_log.toArray();
+
+      const response = await fetch('http://localhost:3002/api/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ categories, hardware, notes, audit_logs }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to sync with backend');
+      }
+
+      console.log('--- Sync to local backend Complete! ---');
+
+    } catch (error) {
+      console.error('Error syncing with local backend:', error);
+      throw error;
+    }
+  };
+  const SYNC_INTERVAL = 5000; // Sync every 5 seconds
+
+  export const useSync = () => {
+    const { addToast } = useToast();
+    const lastSyncRef = useRef<number>(0);
+
+    const categories = useLiveQuery(() => db.categories.where('is_deleted').equals(0).toArray(), []);
+    const hardware = useLiveQuery(() => db.hardware.where('is_deleted').equals(0).toArray(), []);
+    const notes = useLiveQuery(() => db.notes.where('is_deleted').equals(0).toArray(), []);
+    const auditLogs = useLiveQuery(() => db.audit_log.where('is_synced').equals(0).toArray(), []);
+
+    useEffect(() => {
+      const syncData = async () => {
+        const now = Date.now();
+        if (now - lastSyncRef.current < SYNC_INTERVAL) {
+          return; // Too soon to sync again
+        }
+
+        const dataToSync: { [key: string]: any[] } = {};
+
+        if (categories && categories.length > 0) {
+          dataToSync.categories = categories;
+        }
+        if (hardware && hardware.length > 0) {
+          dataToSync.hardware = hardware;
+        }
+        if (notes && notes.length > 0) {
+          dataToSync.notes = notes;
+        }
+        if (auditLogs && auditLogs.length > 0) {
+          dataToSync.audit_logs = auditLogs;
+        }
+
+        if (Object.keys(dataToSync).length === 0) {
+          // console.log("No data to sync.");
+          return;
+        }
+
+        try {
+          const response = await fetch('http://localhost:3002/api/sync', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dataToSync),
+          });
+
+          if (response.ok) {
+            // Mark audit logs as synced after successful sync
+            if (dataToSync.audit_logs) {
+              const syncedLogIds = dataToSync.audit_logs.map(log => log.id);
+              await db.audit_log.where('id').anyOf(syncedLogIds).modify({ is_synced: 1 });
+            }
+            // addToast('Sync successful', 'success');
+            lastSyncRef.current = now;
+          } else {
+            addToast('Sync failed', 'error');
+          }
+        } catch (error) {
+          console.error('Sync error:', error);
+          addToast('Sync error', 'error');
+        }
+      };
+
+      const intervalId = setInterval(syncData, SYNC_INTERVAL);
+
+      return () => clearInterval(intervalId);
+    }, [categories, hardware, notes, auditLogs, addToast]);
+  };
