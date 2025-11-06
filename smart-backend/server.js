@@ -114,6 +114,9 @@ ${Object.entries(tableSchemas)
   .map(([n, s]) => `Table: ${n}\nSchema: ${s}`)
   .join('\n\n')}
 
+When querying the hardware table, you must include the item id. Do not include the location column in the result. The quantity column is of type TEXT.
+When querying hardware items, join with the categories table to get the category name. Do not return the category_id, but the category name itself.
+
 If the question needs data, return **only** a SQLite SELECT query (no markdown, no extra text).
 If the question is conversational, return a natural-language answer.
 User's question: ${userPrompt}`;
@@ -171,7 +174,7 @@ User's question: ${userPrompt}`;
         }
 
         // ----- Clean rows (remove internal fields) -----
-        const hide = ['id', 'is_deleted', 'updated_at', 'created_at', 'updated_by'];
+        const hide = ['is_deleted', 'updated_at', 'created_at', 'updated_by'];
         const cleaned = rows.map(r => {
           const c = { ...r };
           hide.forEach(k => delete c[k]);
