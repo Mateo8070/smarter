@@ -75,7 +75,6 @@ function App() {
   const [isSortModalOpen, setSortModalOpen] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isAiModalOpen, setAiModalOpen] = useState(false);
   const mainContentRef = useRef<HTMLElement>(null);
 
   const setPageWithHistory = (newPage: string, payload?: { auditItemId?: string }) => {
@@ -94,11 +93,7 @@ function App() {
   };
 
   const handleAiClick = () => {
-    if (isDesktop) {
-      setAiModalOpen(true);
-    } else {
-      setPageWithHistory('chatbot');
-    }
+    setPageWithHistory('chatbot');
   };
 
   const goBack = () => {
@@ -179,9 +174,8 @@ function App() {
       case 'categories': return <Categories />;
       case 'audit-log': return <AuditLog itemId={auditFilterItemId} />;
       case 'settings': return <Settings />;
-      case 'chatbot': return <Chatbot />;
-      default: return <Dashboard setPage={setPageWithHistory} handleAiClick={handleAiClick} />;
-    }
+      case 'chatbot': return <Chatbot setPage={setPageWithHistory} />;
+      default: return <Dashboard setPage={setPageWithHistory} handleAiClick={handleAiClick} />;    }
   };
 
   const currentPageTitle = pageTitles[page] || 'Dashboard';
@@ -224,9 +218,6 @@ function App() {
             >
               {renderPage()}
             </Layout>
-            <Modal isOpen={isAiModalOpen} onClose={() => setAiModalOpen(false)}>
-              <Chatbot isModal />
-            </Modal>
           </>
         )}
       </ThemeProvider>

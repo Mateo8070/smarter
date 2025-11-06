@@ -4,7 +4,12 @@ import { type Content } from '@google/generative-ai';
 import { SendIcon, BotIcon, MicrophoneIcon, StopCircleIcon, ClearIcon } from '../components/Icons';
 import { parseMarkdownToReact } from '../utils/markdown';
 import { useDb } from '../hooks/useDb';
-import { Card, CardView } from '../pages/Stock.styles';
+import { Card } from '../pages/Stock.styles';
+import ItemDetailsModal from '../components/ItemDetailsModal';
+import ConfirmationModal from '../components/ConfirmationModal';
+import StockForm from '../components/StockForm';
+import Modal from '../components/Modal';
+import type { Hardware } from '../types/database';
 
 // --- Minimal type definitions for Web Speech API ---
 interface SpeechRecognitionEvent {
@@ -42,6 +47,12 @@ const ChatPageContainer = styled.div<{ $isModal?: boolean }>`
   height: 100%;
   flex: 1;
   max-height: ${({ $isModal }) => $isModal ? '90vh' : '100%'};
+
+  @media (min-width: 768px) {
+    height: 100%; /* Full height for desktop */
+    max-width: 900px; /* Constrain width for desktop */
+    margin: 0 auto; /* Center the container */
+  }
 `;
 
 const MessagesContainer = styled.div`
@@ -52,6 +63,7 @@ const MessagesContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-width: 100%; /* Ensure it doesn't overflow its parent */
 `;
 
 const UserMessage = styled.div`
@@ -64,6 +76,10 @@ const UserMessage = styled.div`
   font-size: 15px;
   line-height: 1.5;
   word-wrap: break-word;
+
+  @media (min-width: 768px) {
+    font-size: 16px;
+  }
 `;
 
 const AIMessageContainer = styled.div`
@@ -81,6 +97,10 @@ const AIMessageContainer = styled.div`
     background-color: var(--danger-surface);
     border-color: var(--danger);
     color: var(--danger);
+  }
+
+  @media (min-width: 768px) {
+    font-size: 16px;
   }
 `;
 
@@ -101,6 +121,10 @@ const AICard = styled.div`
     background-color: var(--danger-surface);
     border-color: var(--danger);
     color: var(--danger);
+  }
+
+  @media (min-width: 768px) {
+    font-size: 16px;
   }
 `;
 
@@ -140,6 +164,13 @@ const ItemTable = styled.table`
 
   td {
     color: var(--text-secondary);
+  }
+  
+  tbody tr {
+    cursor: pointer;
+    &:hover {
+      background-color: var(--surface-variant);
+    }
   }
 `;
 
@@ -191,6 +222,7 @@ const ChatInput = styled.textarea`
   &:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 2px ${({ theme }) => (theme as any).primary}33;
+    border-radius: 24px; /* Ensure corners remain rounded on focus */
   }
 `;
 
@@ -277,9 +309,10 @@ const WelcomeScreen = styled.div`
 // --- Chatbot Component ---
 interface ChatbotProps {
   isModal?: boolean;
+  setPage: (page: string, payload?: { auditItemId?: string }) => void;
 }
 
-const Chatbot: React.FC<ChatbotProps> = ({ isModal }) => {
+const Chatbot: React.FC<ChatbotProps> = ({ isModal, setPage }) => {
   // --- Custom Message Type for Structured Responses ---
 interface CustomAIMessage {
   role: 'model';
@@ -298,12 +331,26 @@ const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const { categories } = useDb();
+  const { categories, hardware, updateHardware, deleteHardware } = useDb();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0) {
+      const lastMessageRef = messageRefs.current[messages.length - 1];
+      if (lastMessageRef) {
+        lastMessageRef.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
+    }
   }, [messages]);
 
   const handleClear = () => {
@@ -392,7 +439,7 @@ const [messages, setMessages] = useState<Message[]>([]);
       { role: 'user', parts: [{ text: userText }] },
     ];
 
-    const response = await fetch('http://localhost:3002/api/chat', {
+    const response = await fetch('http://16.170.212.254:3004/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -424,6 +471,46 @@ const [messages, setMessages] = useState<Message[]>([]);
     }
   };
 
+  const handleItemClick = (item: Hardware) => {
+    setSelectedItem(item);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteRequest = (id: string) => {
+    setItemToDelete(id);
+    setIsConfirmModalOpen(true);
+    setIsModalOpen(false); // Close the details modal
+  };
+
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      deleteHardware(itemToDelete);
+      addToast('Item deleted successfully', 'success');
+    }
+    setIsConfirmModalOpen(false);
+    setItemToDelete(null);
+  };
+
+  const handleEditRequest = (item: Hardware) => {
+    setSelectedItem(item);
+    setIsEditModalOpen(true);
+    setIsModalOpen(false); // Close the details modal
+  };
+
+  const handleEditSubmit = (item: Partial<Hardware>) => {
+    if (selectedItem) {
+      updateHardware(selectedItem.id, item);
+      addToast('Item updated successfully', 'success');
+    }
+    setIsEditModalOpen(false);
+    setSelectedItem(null);
+  };
+
+  const handleHistoryRequest = (item: Hardware) => {
+    setPage('audit-log', { auditItemId: item.id });
+    setIsModalOpen(false); // Close the details modal
+  };
+
   return (
     <ChatPageContainer $isModal={isModal}>
 
@@ -438,7 +525,7 @@ const [messages, setMessages] = useState<Message[]>([]);
         {messages.map((msg, i) => {
           if (msg.role === 'user' && 'parts' in msg && msg.parts && msg.parts.length > 0) {
             return (
-              <ResponseWrapper key={i}>
+              <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
                 <UserMessage>{parseMarkdownToReact(msg.parts[0].text || '')}</UserMessage>
               </ResponseWrapper>
             );
@@ -450,45 +537,19 @@ const [messages, setMessages] = useState<Message[]>([]);
 
             // --- Query result rendering ---
             if (respType === 'query_result' && data && Array.isArray(data)) {
-              if (data.length > 3) {
-                // For larger results show a horizontally-scrollable table within an AICard
-                const excluded = ['id', 'is_deleted', 'updated_at', 'created_at', 'updated_by'];
-                const relevantHeaders = data.length > 0 ? Object.keys(data[0]).filter(k => !excluded.includes(k)) : [];
+              // Helper to check if an object is likely a hardware item
+              const isHardwareItem = (item: any): item is Hardware => 
+                item && typeof item === 'object' && 'description' in item && 'quantity' in item && 'retail_price' in item && 'id' in item;
 
+              // Use card view only for a small number of hardware items
+              if (data.length > 0 && data.length <= 3 && data.every(isHardwareItem)) {
                 return (
-                  <ResponseWrapper key={i}>
-                    <AICard>
-                      {message && <p>{message}</p>}
-                      <TableWrapper>
-                        <ItemTable>
-                          <thead>
-                            <tr>
-                              {relevantHeaders.map(header => <th key={header}>{header}</th>)}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {data.map((item, idx) => (
-                              <tr key={idx}>
-                                {relevantHeaders.map(header => (
-                                  <td key={header}>{item[header]}</td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </ItemTable>
-                      </TableWrapper>
-                    </AICard>
-                  </ResponseWrapper>
-                );
-              } else {
-                // For smaller results, display individual ItemCards
-                return (
-                  <ResponseWrapper key={i}>
+                  <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
                     <CardContainer>
                       {data.map((item, idx) => {
                         const category = categories?.find(c => c.id === item.category_id);
                         return (
-                          <Card key={idx}>
+                          <Card key={idx} onClick={() => handleItemClick(item as Hardware)}>
                             <div className="card-header">
                               <span className="description">{item.description}</span>
                               {category && <span className="category-tag" style={{'--category-color': category.color} as React.CSSProperties}>{category.name}</span>}
@@ -501,15 +562,13 @@ const [messages, setMessages] = useState<Message[]>([]);
                               <div className="detail-item">
                                 <span className="detail-label">Retail</span>
                                 <span className="detail-value">
-                                  MK {item.retail_price?.toLocaleString() ?? 'N/A'}
-                                  {item.retail_price_unit && <span className="price-unit">/ {item.retail_price_unit}</span>}
+                                  {item.retail_price}
                                 </span>
                               </div>
                               <div className="detail-item">
                                 <span className="detail-label">Wholesale</span>
                                 <span className="detail-value">
-                                  MK {item.wholesale_price?.toLocaleString() ?? 'N/A'}
-                                  {item.wholesale_price_unit && <span className="price-unit">/ {item.wholesale_price_unit}</span>}
+                                  {item.wholesale_price}
                                 </span>
                               </div>
                             </div>
@@ -517,6 +576,45 @@ const [messages, setMessages] = useState<Message[]>([]);
                         );
                       })}
                     </CardContainer>
+                  </ResponseWrapper>
+                );
+              } else if (data.length > 0) {
+                // For larger results or non-hardware data, show a table
+                const excluded = ['id', 'is_deleted', 'updated_at', 'created_at', 'updated_by', 'location', 'category_id'];
+                const headers = Object.keys(data[0]).filter(k => !excluded.includes(k));
+
+                // Add category name header if relevant
+                if (Object.keys(data[0]).includes('category_id')) {
+                  headers.splice(1, 0, 'category'); // Insert 'category' after description
+                }
+
+                return (
+                  <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
+                    <AICard>
+                      {message && <p>{message}</p>}
+                      <TableWrapper>
+                        <ItemTable>
+                          <thead>
+                            <tr>
+                              {headers.map(header => <th key={header}>{header.replace(/_/g, ' ')}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.map((item, idx) => (
+                              <tr key={idx} onClick={() => handleItemClick(item as Hardware)}>
+                                {headers.map(header => {
+                                  if (header === 'category') {
+                                    const category = categories?.find(c => c.id === item.category_id);
+                                    return <td key={header}>{category?.name || 'N/A'}</td>;
+                                  }
+                                  return <td key={header}>{item[header]}</td>;
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </ItemTable>
+                      </TableWrapper>
+                    </AICard>
                   </ResponseWrapper>
                 );
               }
@@ -527,7 +625,7 @@ const [messages, setMessages] = useState<Message[]>([]);
               const looksLikeHtml = /<[^>]+>/.test(text.trim());
               const containsTable = /<table/i.test(text.trim());
               return (
-                <ResponseWrapper key={i}>
+                <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
                   <AICard>
                     {looksLikeHtml ? (
                       containsTable ? (
@@ -548,7 +646,7 @@ const [messages, setMessages] = useState<Message[]>([]);
             // --- Error or empty results ---
             if (type === 'error' && message) {
               return (
-                <ResponseWrapper key={i}>
+                <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
                   <AICard className="error">{parseMarkdownToReact(message)}</AICard>
                 </ResponseWrapper>
               );
@@ -556,7 +654,7 @@ const [messages, setMessages] = useState<Message[]>([]);
 
             if (respType === 'query_result' && data && data.length === 0) {
               return (
-                <ResponseWrapper key={i}>
+                <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
                   <AICard>{message || 'No results found.'}</AICard>
                 </ResponseWrapper>
               );
@@ -588,6 +686,32 @@ const [messages, setMessages] = useState<Message[]>([]);
           <SendIcon />
         </SendButton>
       </InputContainer>
+      {selectedItem && (
+        <ItemDetailsModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          item={selectedItem}
+          onEdit={handleEditRequest}
+          onHistory={handleHistoryRequest}
+          onDelete={handleDeleteRequest}
+        />
+      )}
+      {selectedItem && (
+        <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Item">
+          <StockForm
+            onSubmit={handleEditSubmit}
+            initialItem={selectedItem}
+            categories={categories || []}
+          />
+        </Modal>
+      )}
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setIsConfirmModalOpen(false)}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this item? This action cannot be undone."
+      />
     </ChatPageContainer>
   );
 };
