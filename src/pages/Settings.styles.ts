@@ -3,7 +3,9 @@ import styled from 'styled-components';
 export const SettingsPageContainer = styled.div`
   padding: 40px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
   
   @media (max-width: 768px) {
     padding: 24px;
@@ -34,6 +36,21 @@ export const SettingsParagraph = styled.p`
 
 export const ClearDatabaseButton = styled.button`
   background-color: var(--danger);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+export const SyncButton = styled.button`
+  background-color: var(--primary);
   color: white;
   border: none;
   padding: 10px 16px;

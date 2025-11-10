@@ -118,3 +118,16 @@ export const VolumeXIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export const ClearIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...iconProps} {...props}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
 );
+
+export const HammerIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...iconProps} {...props} stroke="none" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M20.85 6.54l-2.39-2.39a1.41 1.41 0 00-2 0L6.5 14.11V18h3.89l9.96-9.96a1.41 1.41 0 000-2z"/>
+    <path d="M11 18.89l-4.2-4.2a2 2 0 00-2.83 0L2.15 16.5a2 2 0 000 2.83L6.34 23.5a2 2 0 002.83 0l1.83-1.83a2 2 0 000-2.83z"/>
+  </svg>
+);
+
+export const NailIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...iconProps} {...props} stroke="none" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M13.3 2.2l-1.4 1.4 3.1 3.1 1.4-1.4-3.1-3.1zM11.9 3.6L2.6 12.9l1.4 1.4 9.3-9.3-1.4-1.4zM16.5 6.4L15.1 5l-9.3 9.3 1.4 1.4 9.3-9.3zM12 14.5l-9.2 9.2.7.7 9.2-9.2-.7-.7z"/>
+  </svg>
+);

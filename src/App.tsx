@@ -14,17 +14,65 @@ import { lightTheme, darkTheme } from './styles/theme';
 import GlobalStyles from './styles/GlobalStyles';
 import { ToastProvider } from './components/Toast';
 import styled, { keyframes } from 'styled-components';
-import { BoxIcon } from './components/Icons';
+import { HammerIcon, NailIcon } from './components/Icons';
 import { useDb } from './hooks/useDb';
 import { useMediaQuery } from './hooks/useMediaQuery';
 
-const pulse = keyframes`
-  0%, 100% {
-    opacity: 1;
+const hammerAnimation = keyframes`
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-30deg);
   }
   50% {
-    opacity: 0.7;
+    transform: rotate(10deg);
   }
+  75% {
+    transform: rotate(-5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+`;
+
+const nailAnimation = keyframes`
+  0%, 25% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+  75%, 100% {
+    transform: translateY(0);
+  }
+`;
+
+const AnimationContainer = styled.div`
+  position: relative;
+  width: 128px;
+  height: 128px;
+`;
+
+const AnimatedHammer = styled(HammerIcon)`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 80px;
+  height: 80px;
+  color: var(--primary);
+  transform-origin: bottom right;
+  animation: ${hammerAnimation} 1.5s ease-in-out infinite;
+`;
+
+const AnimatedNail = styled(NailIcon)`
+  position: absolute;
+  bottom: 20px;
+  left: 55px;
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+  animation: ${nailAnimation} 1.5s ease-in-out infinite;
 `;
 
 const SplashScreen = styled.div`
@@ -42,13 +90,6 @@ const SplashScreen = styled.div`
   opacity: 1;
   transition: opacity 0.5s ease-out;
   gap: 16px;
-
-  svg {
-    width: 64px;
-    height: 64px;
-    color: var(--primary);
-    animation: ${pulse} 1.5s ease-in-out infinite;
-  }
 
   h1 {
     font-size: 28px;
@@ -115,7 +156,7 @@ function App() {
       } catch (error) {
         console.error('Initial sync failed:', error);
       } finally {
-        setTimeout(() => setLoading(false), 500);
+        setTimeout(() => setLoading(false), 1500); // Increased timeout for animation
       }
     };
     initialSync();
@@ -175,7 +216,8 @@ function App() {
       case 'audit-log': return <AuditLog itemId={auditFilterItemId} />;
       case 'settings': return <Settings />;
       case 'chatbot': return <Chatbot setPage={setPageWithHistory} />;
-      default: return <Dashboard setPage={setPageWithHistory} handleAiClick={handleAiClick} />;    }
+      default: return <Dashboard setPage={setPageWithHistory} handleAiClick={handleAiClick} />;
+    }
   };
 
   const currentPageTitle = pageTitles[page] || 'Dashboard';
@@ -186,7 +228,10 @@ function App() {
         <GlobalStyles />
         {loading ? (
           <SplashScreen>
-            <BoxIcon />
+            <AnimationContainer>
+              <AnimatedHammer />
+              <AnimatedNail />
+            </AnimationContainer>
             <h1>Smart Stock</h1>
           </SplashScreen>
         ) : (
@@ -226,3 +271,4 @@ function App() {
 }
 
 export default App;
+

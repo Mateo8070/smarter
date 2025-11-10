@@ -10,6 +10,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import StockForm from '../components/StockForm';
 import Modal from '../components/Modal';
 import type { Hardware } from '../types/database';
+import { useToast } from '../components/Toast';
 
 // --- Minimal type definitions for Web Speech API ---
 interface SpeechRecognitionEvent {
@@ -313,6 +314,7 @@ interface ChatbotProps {
 }
 
 const Chatbot: React.FC<ChatbotProps> = ({ isModal, setPage }) => {
+  const { addToast } = useToast();
   // --- Custom Message Type for Structured Responses ---
 interface CustomAIMessage {
   role: 'model';
@@ -327,7 +329,16 @@ interface CustomAIMessage {
 
 type Message = Content | CustomAIMessage;
 
-const [messages, setMessages] = useState<Message[]>([]);
+const [messages, setMessages] = useState<Message[]>(() => {
+  try {
+    const savedMessages = localStorage.getItem('chatHistory');
+    return savedMessages ? JSON.parse(savedMessages) : [];
+  } catch (error) {
+    console.error("Failed to load chat history from local storage", error);
+    localStorage.removeItem('chatHistory');
+    return [];
+  }
+});
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -341,6 +352,15 @@ const [messages, setMessages] = useState<Message[]>([]);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Save chat history to local storage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('chatHistory', JSON.stringify(messages));
+    } catch (error) {
+      console.error("Failed to save chat history to local storage", error);
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -356,6 +376,7 @@ const [messages, setMessages] = useState<Message[]>([]);
 
   const handleClear = () => {
     setMessages([]);
+    localStorage.removeItem('chatHistory');
   };
 
 
@@ -416,6 +437,16 @@ const [messages, setMessages] = useState<Message[]>([]);
     setInput(''); // Clear input at the start of listening
     recognitionRef.current.start();
     setIsListening(true);
+  };
+
+  const toggleListen = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    } else {
+      handleListen();
+    }
   };
 
   // --- Handle Send ---
@@ -531,7 +562,7 @@ const [messages, setMessages] = useState<Message[]>([]);
         {messages.map((msg, i) => {
           if (msg.role === 'user' && 'parts' in msg && msg.parts && msg.parts.length > 0) {
             return (
-              <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
+              <ResponseWrapper key={i} ref={(el) => { messageRefs.current[i] = el; }}>
                 <UserMessage>{parseMarkdownToReact(msg.parts[0].text || '')}</UserMessage>
               </ResponseWrapper>
             );
@@ -550,7 +581,7 @@ const [messages, setMessages] = useState<Message[]>([]);
               // Use card view only for a small number of hardware items
               if (data.length > 0 && data.length <= 3 && data.every(isHardwareItem)) {
                 return (
-                  <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
+                  <ResponseWrapper key={i} ref={(el) => { messageRefs.current[i] = el; }}>
                     <CardContainer>
                       {data.map((item, idx) => {
                         const category = categories?.find(c => c.id === item.category_id);
@@ -595,7 +626,7 @@ const [messages, setMessages] = useState<Message[]>([]);
                 }
 
                 return (
-                  <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
+                  <ResponseWrapper key={i} ref={(el) => { messageRefs.current[i] = el; }}>
                     <AICard>
                       {message && <p>{message}</p>}
                       <TableWrapper>
@@ -631,7 +662,7 @@ const [messages, setMessages] = useState<Message[]>([]);
               const looksLikeHtml = /<[^>]+>/.test(text.trim());
               const containsTable = /<table/i.test(text.trim());
               return (
-                <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
+                <ResponseWrapper key={i} ref={(el) => { messageRefs.current[i] = el; }}>
                   <AICard>
                     {looksLikeHtml ? (
                       containsTable ? (
@@ -652,7 +683,7 @@ const [messages, setMessages] = useState<Message[]>([]);
             // --- Error or empty results ---
             if (type === 'error' && message) {
               return (
-                <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
+                <ResponseWrapper key={i} ref={(el) => { messageRefs.current[i] = el; }}>
                   <AICard className="error">{parseMarkdownToReact(message)}</AICard>
                 </ResponseWrapper>
               );
@@ -660,7 +691,7 @@ const [messages, setMessages] = useState<Message[]>([]);
 
             if (respType === 'query_result' && data && data.length === 0) {
               return (
-                <ResponseWrapper key={i} ref={(el) => (messageRefs.current[i] = el)}>
+                <ResponseWrapper key={i} ref={(el) => { messageRefs.current[i] = el; }}>
                   <AICard>{message || 'No results found.'}</AICard>
                 </ResponseWrapper>
               );

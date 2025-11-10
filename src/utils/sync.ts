@@ -4,7 +4,7 @@ import { supabase } from '../services/supabase';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef } from 'react';
 import { useToast } from '../components/Toast';
-
+//added a comment
 export const syncWithBackend = async () => {
   console.log('--- Starting Sync ---');
   const lastSyncedAt = localStorage.getItem('lastSyncedAt') || new Date(0).toISOString();
@@ -77,7 +77,7 @@ export const syncWithBackend = async () => {
       console.error('Supabase hardware fetch error details:', hardwareError);
       throw new Error(`Failed to get inventory updates from the cloud. Details: ${hardwareError.message}`);
     }
-    console.log('Fetched remote hardware:', remoteHardware?.length, remoteHardware);
+    console.log('Fetched remote hardware items:', remoteHardware?.length, remoteHardware);
 
     const { data: remoteNotes, error: notesError } = await supabase.from('notes').select('*');
     if (notesError) {

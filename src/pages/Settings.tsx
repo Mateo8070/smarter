@@ -9,6 +9,7 @@ import {
   SettingsTitle,
   SettingsParagraph,
   ClearDatabaseButton,
+  SyncButton,
 } from './Settings.styles';
 
 const Settings: React.FC = () => {
@@ -47,9 +48,16 @@ const Settings: React.FC = () => {
         <ClearDatabaseButton onClick={() => setShowConfirmModal(true)}>
           Clear Local Database
         </ClearDatabaseButton>
-        <ClearDatabaseButton onClick={handleSync} style={{ marginLeft: '10px' }}>
+      </SettingsCard>
+
+      <SettingsCard>
+        <SettingsTitle>Backend Synchronization</SettingsTitle>
+        <SettingsParagraph>
+          Manually sync your local data with the backend server. This is useful if you suspect your local data is out of date.
+        </SettingsParagraph>
+        <SyncButton onClick={handleSync}>
           Sync with Backend
-        </ClearDatabaseButton>
+        </SyncButton>
       </SettingsCard>
 
       <ConfirmationModal
