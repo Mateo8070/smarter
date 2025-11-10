@@ -333,6 +333,7 @@ const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { categories, hardware, updateHardware, deleteHardware } = useDb();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -357,15 +358,17 @@ const [messages, setMessages] = useState<Message[]>([]);
     setMessages([]);
   };
 
-  // --- Speech Recognition ---
-  const toggleListen = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    } else {
-      handleListen();
+
+  const handleMouseDown = () => {
+    handleListen();
+  };
+
+  const handleMouseUp = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
     }
   };
+
 
   const handleError = (error: Event | SpeechRecognitionErrorEvent | string) => {
     console.error("Speech recognition error:", error);
@@ -386,21 +389,24 @@ const [messages, setMessages] = useState<Message[]>([]);
     }
     if (!recognitionRef.current) {
       const recognition = new SpeechRecognitionAPI();
-      recognition.continuous = false; // Only capture a single phrase
-      recognition.interimResults = true; // Get interim results
+      recognition.continuous = true; 
+      recognition.interimResults = true; 
       recognition.lang = 'en-US';
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
         let interimTranscript = '';
+        let finalTranscript = '';
+
         for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            setInput(prev => prev + event.results[i][0].transcript); // Append final results
+            finalTranscript += transcript + ' ';
           } else {
-            interimTranscript += event.results[i][0].transcript;
+            interimTranscript += transcript;
           }
         }
-        // Display interim results in the input field prefix (optional, requires state)
-        // For now, only final results are appended to the input for confirmation
+        
+        setInput(finalTranscript + interimTranscript);
       };
 
       recognition.onend = () => setIsListening(false);
