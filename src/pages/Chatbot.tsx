@@ -476,7 +476,7 @@ const [messages, setMessages] = useState<Message[]>(() => {
       { role: 'user', parts: [{ text: userText }] },
     ];
 
-    const response = await fetch('http://16.170.212.254:3004/api/chat', {
+    const response = await fetch('https://16.170.212.254:443/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
