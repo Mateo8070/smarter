@@ -92,6 +92,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
+  const [showStockForm, setShowStockForm] = useState(false); // New state to control StockForm visibility
+  const [aiSuggestedItem, setAiSuggestedItem] = useState<Hardware | null>(null); // New state for AI suggested item
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false); // New state for exit confirmation modal
 
   // State lifted from Stock page
   const [searchQuery, setSearchQuery] = useState('');
@@ -120,6 +123,11 @@ function App() {
 
   const handleAiClick = () => {
     setPageWithHistory('chatbot');
+  };
+
+  const openStockFormWithAIItem = (item: Hardware) => {
+    setAiSuggestedItem(item);
+    setShowStockForm(true);
   };
 
   const goBack = () => {
@@ -163,6 +171,22 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      // If we are on the dashboard and trying to go back further
+      if (page === 'dashboard' && pageHistory.length === 1) {
+        // Prevent the default back action
+        window.history.pushState(null, '', window.location.pathname);
+        setShowExitConfirmModal(true);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [page, pageHistory]);
+
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
@@ -200,7 +224,7 @@ function App() {
       case 'categories': return <Categories />;
       case 'audit-log': return <AuditLog itemId={auditFilterItemId} />;
       case 'settings': return <Settings />;
-      case 'chatbot': return <Chatbot setPage={setPageWithHistory} />;
+      case 'chatbot': return <Chatbot setPage={setPageWithHistory} openStockFormWithAIItem={openStockFormWithAIItem} />;
       default: return <Dashboard setPage={setPageWithHistory} handleAiClick={handleAiClick} />;
     }
   };
@@ -261,6 +285,54 @@ function App() {
             >
               {renderPage()}
             </Layout>
+
+            <Modal isOpen={showStockForm} onClose={() => setShowStockForm(false)} title="Add New Item">
+              <StockForm
+                onSubmit={async (item) => {
+                  // This onSubmit is for the AI-suggested item
+                  if (!hardware || !categories || !addHardware || !addAuditLog) return;
+                  try {
+                    const newItem: Hardware = {
+                      ...item,
+                      id: crypto.randomUUID(),
+                      updated_at: new Date().toISOString(),
+                      is_deleted: false,
+                    } as Hardware;
+                    await addHardware(newItem);
+                    await addAuditLog({
+                      id: crypto.randomUUID(),
+                      item_id: newItem.id,
+                      change_description: `Created item: ${newItem.description} via AI suggestion`,
+                      created_at: new Date().toISOString(),
+                      username: 'Giya Hardware',
+                      is_synced: 0
+                    });
+                    setShowStockForm(false);
+                    setAiSuggestedItem(null);
+                    // Optionally navigate to stock page or show toast
+                  } catch (error) {
+                    console.error('Failed to add AI suggested item:', error);
+                  }
+                }}
+                initialItem={aiSuggestedItem || undefined}
+                categories={categories || []}
+              />
+            </Modal>
+
+            <ConfirmationModal
+              isOpen={showExitConfirmModal}
+              onConfirm={() => {
+                setShowExitConfirmModal(false);
+                window.history.back(); // Allow the back action to proceed
+              }}
+              onCancel={() => {
+                setShowExitConfirmModal(false);
+                // Keep the user on the current page (dashboard)
+                // The pushState in useEffect already prevented the actual navigation
+              }}
+              title="Exit Smart Stock?"
+              message="Are you sure you want to exit Smart Stock?"
+            />
           </>
         )}
       </ThemeProvider>

@@ -169,6 +169,11 @@ const ItemTable = styled.table<{ $zebra?: boolean }>`
     padding: 8px;
     text-align: left;
     color: var(--text-secondary);
+
+    &.description-cell {
+      white-space: normal;
+      word-break: break-word;
+    }
   }
   
   tbody tr {
@@ -333,6 +338,7 @@ const WelcomeScreen = styled.div`
 interface ChatbotProps {
   isModal?: boolean;
   setPage: (page: string, payload?: { auditItemId?: string }) => void;
+  openStockFormWithAIItem: (item: Hardware) => void;
 }
 
 const Chatbot: React.FC<ChatbotProps> = ({ isModal, setPage }) => {
@@ -342,16 +348,17 @@ interface CustomAIMessage {
   role: 'model';
   customData: {
     success: boolean;
-    type: 'query_result' | 'natural_language' | 'error';
+    type: 'query_result' | 'natural_language' | 'error' | 'add_item_suggestion'; // Added new type
     message?: string;
     text?: string;
     data?: any[];
+    itemData?: Hardware; // Added for add_item_suggestion
   };
 }
 
 type Message = Content | CustomAIMessage;
 
-const [messages, setMessages] = useState<Message[]>(() => {
+  const [messages, setMessages] = useState<Message[]>(() => {
   try {
     const savedMessages = localStorage.getItem('chatHistory');
     return savedMessages ? JSON.parse(savedMessages) : [];
@@ -365,6 +372,7 @@ const [messages, setMessages] = useState<Message[]>(() => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null); // Add this ref
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -374,7 +382,6 @@ const [messages, setMessages] = useState<Message[]>(() => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
   // Save chat history to local storage whenever it changes
   useEffect(() => {
     try {
@@ -449,14 +456,22 @@ const [messages, setMessages] = useState<Message[]>(() => {
           }
         }
         
-        setInput(finalTranscript + interimTranscript);
+        if (chatInputRef.current) {
+          chatInputRef.current.value = finalTranscript + interimTranscript;
+        }
+        if (finalTranscript) {
+          setInput(finalTranscript.trim()); // Update state only with final transcript
+        }
       };
 
       recognition.onend = () => setIsListening(false);
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => handleError(event);
       recognitionRef.current = recognition;
     }
-    setInput(''); // Clear input at the start of listening
+    if (chatInputRef.current) {
+      chatInputRef.current.value = ''; // Clear input at the start of listening
+    }
+    setInput(''); // Clear the state as well
     recognitionRef.current.start();
     setIsListening(true);
   };
@@ -474,9 +489,12 @@ const [messages, setMessages] = useState<Message[]>(() => {
   // --- Handle Send ---
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!chatInputRef.current || !chatInputRef.current.value.trim() || isLoading) return;
 
-    const userText = input;
+    const userText = chatInputRef.current.value;
+    setInput(userText); // Update the state for history
+    chatInputRef.current.value = ''; // Clear the input field
+
     // Map current messages to the format expected by the backend (Content[])
     const historyForBackend: Content[] = messages.map(msg => {
       if ('customData' in msg) {
@@ -488,7 +506,6 @@ const [messages, setMessages] = useState<Message[]>(() => {
 
     const newMessages: Message[] = [...messages, { role: 'user', parts: [{ text: userText }] }];
     setMessages(newMessages);
-    setInput('');
     setIsLoading(true);
 
     try {
@@ -515,6 +532,11 @@ const [messages, setMessages] = useState<Message[]>(() => {
         const data = await response.json();
         setMessages(prev => [...prev, { role: 'model', customData: data }]);
 
+        // Handle new 'add_item_suggestion' type
+        if (data.type === 'add_item_suggestion' && data.itemData) {
+          openStockFormWithAIItem(data.itemData);
+        }
+
     } catch (err: any) {
       console.error("[API Error]", err);
       setMessages(prev => [...prev, { role: 'model', customData: { success: false, type: 'error', message: `API Error: ${err.message}` } }]);
@@ -526,7 +548,9 @@ const [messages, setMessages] = useState<Message[]>(() => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend(e as any);
+      if (chatInputRef.current && chatInputRef.current.value.trim()) {
+        handleSend(e as any);
+      }
     }
   };
 
@@ -669,15 +693,12 @@ const [messages, setMessages] = useState<Message[]>(() => {
                             {data.map((item, idx) => (
                               <tr key={idx} onClick={() => handleItemClick(item as Hardware)}>
                                 {headers.map(header => {
+                                  const isDescription = header === 'description';
                                   if (header === 'category') {
                                     const category = categories?.find(c => c.id === item.category_id);
                                     return <td key={header}>{category?.name || 'N/A'}</td>;
                                   }
-                                  // Apply white-space: normal !important to the description column
-                                  if (header === 'description') {
-                                    return <td key={header} style={{ whiteSpace: 'normal !important' as 'normal' }}>{item[header]}</td>;
-                                  }
-                                  return <td key={header}>{item[header]}</td>;
+                                  return <td key={header} className={isDescription ? 'description-cell' : ''}>{item[header]}</td>;
                                 })}
                               </tr>
                             ))}
@@ -744,8 +765,7 @@ const [messages, setMessages] = useState<Message[]>(() => {
             </MicButton>
           )}
           <ChatInput
-            value={input}
-            onChange={e => setInput(e.target.value)}
+            ref={chatInputRef}
             onKeyDown={handleKeyPress}
             placeholder="Type or speak..."
             disabled={isLoading}

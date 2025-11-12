@@ -70,7 +70,7 @@ export const CardView = styled(ContentArea)`
   }
 `;
 
-export const Card = styled.div`
+export const Card = styled.div<{ $isSelectMode?: boolean; $isSelected?: boolean }>`
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -80,12 +80,43 @@ export const Card = styled.div`
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative; /* Needed for overlay */
   
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     border-color: var(--primary);
   }
+
+  ${({ $isSelectMode }) => $isSelectMode && `
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary)33; /* Subtle glow */
+  `}
+
+  ${({ $isSelected }) => $isSelected && `
+    background-color: var(--primary-light); /* Lighter primary color for selected */
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary); /* Stronger glow for selected */
+  `}
+
+  ${({ $isSelected }) => $isSelected && `
+    &::after {
+      content: '✓';
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: var(--primary);
+      color: white;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+    }
+  `}
 
   .card-header {
     display: flex;
@@ -321,4 +352,72 @@ export const EmptyStateMessage = styled.p`
   font-size: 16px;
   max-width: 400px;
   margin-top: 16px;
+`;
+
+export const SelectionActionBar = styled.div<{ $isVisible: boolean }>`
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transform: translateY(${({ $isVisible }) => ($isVisible ? '0' : '100%')});
+  transition: transform 0.3s ease-in-out;
+  z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+
+  @media (max-width: 768px) {
+    padding: 12px 16px;
+  }
+`;
+
+export const SelectionCount = styled.span`
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+`;
+
+export const SelectionActions = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+export const SelectionButton = styled.button`
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &.reassign {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    &:hover {
+      background-color: var(--primary-dark);
+    }
+  }
+
+  &.delete {
+    background-color: var(--danger);
+    color: white;
+    border: none;
+    &:hover {
+      background-color: var(--danger-dark);
+    }
+  }
+
+  &.cancel {
+    background-color: var(--surface-variant);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    &:hover {
+      background-color: var(--background);
+    }
+  }
 `;

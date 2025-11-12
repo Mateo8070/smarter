@@ -1,3 +1,4 @@
+import ReassignCategoryModal from '../components/ReassignCategoryModal';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDb } from '../hooks/useDb';
 import StockForm from '../components/StockForm';
@@ -69,6 +70,11 @@ const Stock: React.FC<StockProps> = (props) => {
   const [detailsItem, setDetailsItem] = useState<Hardware | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isSelectMode, setIsSelectMode] = useState(false); // New state for selection mode
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set()); // New state for selected items
+  const [showReassignModal, setShowReassignModal] = useState(false); // New state for reassign modal
+  const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false); // New state for bulk delete confirmation
+  const [itemsToBulkDeleteIds, setItemsToBulkDeleteIds] = useState<string[]>([]); // New state for items to bulk delete
 
   // Reset page to 1 when filters or sorting change
   useEffect(() => {
@@ -207,6 +213,58 @@ const Stock: React.FC<StockProps> = (props) => {
       addToast('Stock item deleted', 'success');
     } catch (error) {
       addToast('Failed to delete item', 'error');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!deleteHardware || !addAuditLog) return;
+    try {
+      for (const itemId of itemsToBulkDeleteIds) {
+        const itemToDelete = hardware?.find(h => h.id === itemId);
+        const description = itemToDelete?.description || 'Unknown Item';
+        await deleteHardware(itemId);
+        await addAuditLog({
+          id: crypto.randomUUID(),
+          item_id: itemId,
+          change_description: `Bulk deleted item: ${description}`,
+          created_at: new Date().toISOString(),
+          username: 'Giya Hardware',
+          is_synced: 0
+        });
+      }
+      addToast(`${itemsToBulkDeleteIds.length} items deleted`, 'success');
+      setIsSelectMode(false);
+      setSelectedItems(new Set());
+      setItemsToBulkDeleteIds([]);
+      setShowBulkConfirmModal(false);
+    } catch (error) {
+      addToast('Failed to bulk delete items', 'error');
+    }
+  };
+
+  const handleBulkReassign = async (newCategoryId: string) => {
+    if (!updateHardware || !addAuditLog) return;
+    try {
+      for (const itemId of Array.from(selectedItems)) {
+        const itemToUpdate = hardware?.find(h => h.id === itemId);
+        const oldCategory = categories?.find(c => c.id === itemToUpdate?.category_id)?.name || 'N/A';
+        const newCategory = categories?.find(c => c.id === newCategoryId)?.name || 'N/A';
+        await updateHardware(itemId, { category_id: newCategoryId, updated_at: new Date().toISOString() });
+        await addAuditLog({
+          id: crypto.randomUUID(),
+          item_id: itemId,
+          change_description: `Bulk reassigned item: ${itemToUpdate?.description} from category '${oldCategory}' to '${newCategory}'`,
+          created_at: new Date().toISOString(),
+          username: 'Giya Hardware',
+          is_synced: 0
+        });
+      }
+      addToast(`${selectedItems.size} items reassigned`, 'success');
+      setIsSelectMode(false);
+      setSelectedItems(new Set());
+      setShowReassignModal(false);
+    } catch (error) {
+      addToast('Failed to bulk reassign items', 'error');
     }
   };
 
@@ -364,8 +422,40 @@ const Stock: React.FC<StockProps> = (props) => {
           <CardView>
             {paginatedItems.map((item) => {
               const category = categories?.find(c => c.id === item.category_id);
+              const isSelected = selectedItems.has(item.id);
+              let longPressTimer: ReturnType<typeof setTimeout>;
+
+              const handlePressStart = () => {
+                longPressTimer = setTimeout(() => {
+                  setIsSelectMode(true);
+                  toggleSelectItem(item.id);
+                }, 500); // 500ms for long press
+              };
+
+              const handlePressEnd = () => {
+                clearTimeout(longPressTimer);
+              };
+
+              const handleClick = () => {
+                if (isSelectMode) {
+                  toggleSelectItem(item.id);
+                } else {
+                  openDetails(item);
+                }
+              };
+
               return (
-                <Card key={item.id} onClick={() => openDetails(item)}>
+                <Card
+                  key={item.id}
+                  $isSelectMode={isSelectMode}
+                  $isSelected={isSelected}
+                  onClick={handleClick}
+                  onTouchStart={handlePressStart}
+                  onTouchEnd={handlePressEnd}
+                  onMouseDown={handlePressStart}
+                  onMouseUp={handlePressEnd}
+                  onTouchCancel={handlePressEnd} // Handle cases where touch is interrupted
+                >
                   <div className="card-header">
                     <span className="description">{item.description}</span>
                     {category && <span className="category-tag" style={{'--category-color': category.color} as React.CSSProperties}>{category.name}</span>}
@@ -436,6 +526,36 @@ const Stock: React.FC<StockProps> = (props) => {
         onHistory={(it) => { closeDetails(); setPage && setPage('audit-log', { auditItemId: it.id }); }}
         onDelete={(id) => { closeDetails(); handleDeleteClick(id); }}
       />}
+
+      <ReassignCategoryModal
+        isOpen={showReassignModal}
+        onClose={() => setShowReassignModal(false)}
+        categories={categories || []}
+        onReassign={handleBulkReassign}
+        selectedCount={selectedItems.size}
+      />
+
+      <ConfirmationModal
+        isOpen={showBulkConfirmModal}
+        onConfirm={handleBulkDelete}
+        onCancel={() => setShowBulkConfirmModal(false)}
+        title="Confirm Bulk Deletion"
+        message={`Are you sure you want to delete ${itemsToBulkDeleteIds.length} selected items? This action cannot be undone.`}
+      />
+
+      {isSelectMode && (
+        <SelectionActionBar $isVisible={selectedItems.size > 0}>
+          <SelectionCount>{selectedItems.size} selected</SelectionCount>
+          <SelectionActions>
+            <SelectionButton className="reassign" onClick={() => setShowReassignModal(true)}>Reassign</SelectionButton>
+            <SelectionButton className="delete" onClick={() => {
+              setItemsToBulkDeleteIds(Array.from(selectedItems));
+              setShowBulkConfirmModal(true);
+            }}>Delete</SelectionButton>
+            <SelectionButton className="cancel" onClick={() => { setIsSelectMode(false); setSelectedItems(new Set()); }}>Cancel</SelectionButton>
+          </SelectionActions>
+        </SelectionActionBar>
+      )}
     </StockPageContainer>
   );
 };
