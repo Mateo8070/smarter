@@ -65,6 +65,10 @@ const MessagesContainer = styled.div`
   flex-direction: column;
   gap: 12px;
   max-width: 100%; /* Ensure it doesn't overflow its parent */
+
+  @media (max-width: 767px) {
+    padding: 24px 12px; /* Vertical 24px, Horizontal 12px */
+  }
 `;
 
 const UserMessage = styled.div`
@@ -145,25 +149,25 @@ const TableWrapper = styled.div`
   background-color: transparent;
 `;
 
-const ItemTable = styled.table`
+const ItemTable = styled.table<{ $zebra?: boolean }>`
   width: 100%;
   border-collapse: collapse;
   min-width: 600px; /* Ensure table is wide enough for scrolling */
 
-  th, td {
+  th {
     border: 1px solid var(--border);
     padding: 8px;
     text-align: left;
     white-space: nowrap; /* Prevent text wrapping */
-  }
-
-  th {
     background-color: var(--surface-variant);
     font-weight: 600;
     color: var(--text-primary);
   }
 
   td {
+    border: 1px solid var(--border);
+    padding: 8px;
+    text-align: left;
     color: var(--text-secondary);
   }
   
@@ -172,6 +176,11 @@ const ItemTable = styled.table`
     &:hover {
       background-color: var(--surface-variant);
     }
+    ${({ $zebra }) => $zebra && `
+      &:nth-child(even) {
+        background-color: var(--surface-variant); // Or a slightly different shade
+      }
+    `}
   }
 `;
 
@@ -195,6 +204,10 @@ const InputContainer = styled.form`
   border-top: 1px solid var(--border);
   background-color: var(--surface);
   gap: 8px;
+
+  @media (max-width: 767px) {
+    padding: 12px 8px; /* Vertical 12px, Horizontal 8px */
+  }
 `;
 
 const InputWrapper = styled.div`
@@ -225,6 +238,11 @@ const ChatInput = styled.textarea`
     box-shadow: 0 0 0 2px ${({ theme }) => (theme as any).primary}33;
     border-radius: 24px; /* Ensure corners remain rounded on focus */
   }
+
+  @media (max-width: 767px) {
+    padding: 12px 12px; /* Reduced horizontal padding */
+    padding-left: 40px; /* Adjusted for MicButton */
+  }
 `;
 
 const MicButton = styled.button`
@@ -250,6 +268,10 @@ const MicButton = styled.button`
   }
   &.mic-active { color: var(--danger); }
   svg { width: 20px; height: 20px; }
+
+  @media (max-width: 767px) {
+    left: 0px; /* Moved closer to the edge */
+  }
 `;
 
 const SendButton = styled.button`
@@ -476,7 +498,7 @@ const [messages, setMessages] = useState<Message[]>(() => {
       { role: 'user', parts: [{ text: userText }] },
     ];
 
-    const response = await fetch('https://16.170.212.254:443/api/chat', {
+    const response = await fetch('http://16.170.212.254:3004/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -617,12 +639,13 @@ const [messages, setMessages] = useState<Message[]>(() => {
                 );
               } else if (data.length > 0) {
                 // For larger results or non-hardware data, show a table
-                const excluded = ['id', 'is_deleted', 'updated_at', 'created_at', 'updated_by', 'location', 'category_id'];
-                const headers = Object.keys(data[0]).filter(k => !excluded.includes(k));
+                const excluded = ['id', 'is_deleted', 'updated_at', 'created_at', 'updated_by', 'location'];
+                let headers = Object.keys(data[0]).filter(k => !excluded.includes(k));
 
-                // Add category name header if relevant
+                // If category_id was in the original data, add 'category' to the end of headers
                 if (Object.keys(data[0]).includes('category_id')) {
-                  headers.splice(1, 0, 'category'); // Insert 'category' after description
+                  headers = headers.filter(h => h !== 'category_id'); // Ensure it's not duplicated if somehow present
+                  headers.push('category');
                 }
 
                 return (
@@ -630,10 +653,16 @@ const [messages, setMessages] = useState<Message[]>(() => {
                     <AICard>
                       {message && <p>{message}</p>}
                       <TableWrapper>
-                        <ItemTable>
+                        <ItemTable $zebra={msg.customData.renderHint === 'zebra_table'}>
                           <thead>
                             <tr>
-                              {headers.map(header => <th key={header}>{header.replace(/_/g, ' ')}</th>)}
+                              {headers.map(header => {
+                                const displayHeader = header === 'quantity' ? 'Qty' :
+                                                      header === 'wholesale_price' ? 'WP' :
+                                                      header === 'retail_price' ? 'RP' :
+                                                      header.replace(/_/g, ' ');
+                                return <th key={header}>{displayHeader}</th>;
+                              })}
                             </tr>
                           </thead>
                           <tbody>
@@ -643,6 +672,10 @@ const [messages, setMessages] = useState<Message[]>(() => {
                                   if (header === 'category') {
                                     const category = categories?.find(c => c.id === item.category_id);
                                     return <td key={header}>{category?.name || 'N/A'}</td>;
+                                  }
+                                  // Apply white-space: normal !important to the description column
+                                  if (header === 'description') {
+                                    return <td key={header} style={{ whiteSpace: 'normal !important' as 'normal' }}>{item[header]}</td>;
                                   }
                                   return <td key={header}>{item[header]}</td>;
                                 })}

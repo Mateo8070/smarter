@@ -14,65 +14,50 @@ import { lightTheme, darkTheme } from './styles/theme';
 import GlobalStyles from './styles/GlobalStyles';
 import { ToastProvider } from './components/Toast';
 import styled, { keyframes } from 'styled-components';
-import { HammerIcon, NailIcon } from './components/Icons';
 import { useDb } from './hooks/useDb';
 import { useMediaQuery } from './hooks/useMediaQuery';
 
 const hammerAnimation = keyframes`
-  0% {
-    transform: rotate(0deg);
-  }
-  25% {
-    transform: rotate(-30deg);
-  }
-  50% {
-    transform: rotate(10deg);
-  }
-  75% {
-    transform: rotate(-5deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
+  0% { transform: rotate(0deg) translateY(0px); }
+  25% { transform: rotate(-30deg) translateY(-10px); }
+  50% { transform: rotate(0deg) translateY(0px); }
+  75% { transform: rotate(-30deg) translateY(-10px); }
+  100% { transform: rotate(0deg) translateY(0px); }
 `;
 
 const nailAnimation = keyframes`
-  0%, 25% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(5px);
-  }
-  75%, 100% {
-    transform: translateY(0);
-  }
+  0% { transform: translateY(0px); opacity: 1; }
+  50% { transform: translateY(10px); opacity: 0.5; }
+  100% { transform: translateY(0px); opacity: 1; }
 `;
 
 const AnimationContainer = styled.div`
   position: relative;
-  width: 128px;
-  height: 128px;
+  width: 150px; /* Adjusted for new SVG size */
+  height: 150px; /* Adjusted for new SVG size */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 `;
 
-const AnimatedHammer = styled(HammerIcon)`
+const AnimatedHammer = styled.svg`
+  width: 150px;
+  height: 150px;
+  animation: ${hammerAnimation} 1.5s ease-in-out infinite;
+  transform-origin: 75% 75%; /* Adjust origin for rotation around the handle */
   position: absolute;
   top: 0;
   left: 0;
-  width: 80px;
-  height: 80px;
-  color: var(--primary);
-  transform-origin: bottom right;
-  animation: ${hammerAnimation} 1.5s ease-in-out infinite;
 `;
 
-const AnimatedNail = styled(NailIcon)`
-  position: absolute;
-  bottom: 20px;
-  left: 55px;
-  width: 20px;
-  height: 20px;
-  color: var(--primary);
+const AnimatedNail = styled.svg`
+  width: 30px;
+  height: 60px;
+  margin-top: 20px;
   animation: ${nailAnimation} 1.5s ease-in-out infinite;
+  position: absolute;
+  bottom: -20px; /* Adjust position relative to hammer */
 `;
 
 const SplashScreen = styled.div`
@@ -229,8 +214,21 @@ function App() {
         {loading ? (
           <SplashScreen>
             <AnimationContainer>
-              <AnimatedHammer />
-              <AnimatedNail />
+              <AnimatedHammer viewBox="0 0 200 200">
+                {/* Handle */}
+                <rect x="90" y="100" width="20" height="80" fill="#8B4513" rx="5"/>
+                {/* Head */}
+                <rect x="50" y="60" width="100" height="50" fill="#696969" rx="8"/>
+                {/* Claw (left side) */}
+                <path d="M50 85 Q30 85 30 70 Q30 55 50 55 L50 85 Z" fill="#696969"/>
+                {/* Striking face (right side) */}
+                <rect x="140" y="70" width="20" height="30" fill="#A9A9A9" rx="2"/>
+              </AnimatedHammer>
+              <AnimatedNail viewBox="0 0 100 100">
+                {/* Simple Nail SVG */}
+                <rect x="45" y="10" width="10" height="60" fill="#A9A9A9" rx="2"/>
+                <circle cx="50" cy="10" r="8" fill="#A9A9A9"/>
+              </AnimatedNail>
             </AnimationContainer>
             <h1>Smart Stock</h1>
           </SplashScreen>

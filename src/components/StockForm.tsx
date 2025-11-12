@@ -122,27 +122,24 @@ const parsePriceAndUnit = (priceString: string): { price: number | null, unit: s
 
 
 const StockForm: React.FC<StockFormProps> = ({ onSubmit, initialItem, categories }) => {
-  // Use a local state that can hold strings for price fields during editing
   const [item, setItem] = useState<Partial<Hardware>>({});
+  const [retailPriceInput, setRetailPriceInput] = useState('');
+  const [wholesalePriceInput, setWholesalePriceInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialItem) {
-      // Format numeric prices into strings for the form fields for editing
-      setItem({
-        ...initialItem,
-        retail_price: formatPrice(initialItem.retail_price, initialItem.retail_price_unit) as any,
-        wholesale_price: formatPrice(initialItem.wholesale_price, initialItem.wholesale_price_unit) as any,
-      });
+      setItem(initialItem);
+      setRetailPriceInput(formatPrice(initialItem.retail_price, initialItem.retail_price_unit));
+      setWholesalePriceInput(formatPrice(initialItem.wholesale_price, initialItem.wholesale_price_unit));
     } else {
-      // Reset for a new item, ensuring price fields are empty strings
       setItem({
         description: '',
         category_id: categories.length > 0 ? categories[0].id : '',
         quantity: '',
-        retail_price: '' as any,
-        wholesale_price: '' as any,
       });
+      setRetailPriceInput('');
+      setWholesalePriceInput('');
     }
   }, [initialItem, categories]);
 
@@ -153,13 +150,19 @@ const StockForm: React.FC<StockFormProps> = ({ onSubmit, initialItem, categories
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setItem((prev) => ({ ...prev, [name]: value }));
+    if (name === 'retail_price') {
+      setRetailPriceInput(value);
+    } else if (name === 'wholesale_price') {
+      setWholesalePriceInput(value);
+    } else {
+      setItem((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { price: retailPrice, unit: retailUnit } = parsePriceAndUnit(item.retail_price as any || '');
-    const { price: wholesalePrice, unit: wholesaleUnit } = parsePriceAndUnit(item.wholesale_price as any || '');
+    const { price: retailPrice, unit: retailUnit } = parsePriceAndUnit(retailPriceInput);
+    const { price: wholesalePrice, unit: wholesaleUnit } = parsePriceAndUnit(wholesalePriceInput);
 
     const submissionData: Partial<Hardware> = {
       ...item,
@@ -219,7 +222,7 @@ const StockForm: React.FC<StockFormProps> = ({ onSubmit, initialItem, categories
                 id="retail_price"
                 type="text"
                 name="retail_price"
-                value={item.retail_price as any || ''}
+                value={retailPriceInput}
                 onChange={handleChange}
                 placeholder="e.g., 5000 / each"
             />
@@ -230,7 +233,7 @@ const StockForm: React.FC<StockFormProps> = ({ onSubmit, initialItem, categories
                 id="wholesale_price"
                 type="text"
                 name="wholesale_price"
-                value={item.wholesale_price as any || ''}
+                value={wholesalePriceInput}
                 onChange={handleChange}
                 placeholder="e.g., 4500 / box"
             />

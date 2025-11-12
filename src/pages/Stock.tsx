@@ -125,6 +125,39 @@ const Stock: React.FC<StockProps> = (props) => {
   const handleUpdateItem = async (item: Partial<Hardware>) => {
     if (!updateHardware || !editingItem || !addAuditLog) return;
     try {
+      const changes: string[] = [];
+      const oldItem = editingItem;
+      const newItem = item;
+
+      if (oldItem.description !== newItem.description) {
+        changes.push(`description from '${oldItem.description}' to '${newItem.description}'`);
+      }
+      if (oldItem.category_id !== newItem.category_id) {
+        const oldCategory = categories?.find(c => c.id === oldItem.category_id)?.name || 'N/A';
+        const newCategory = categories?.find(c => c.id === newItem.category_id)?.name || 'N/A';
+        changes.push(`category from '${oldCategory}' to '${newCategory}'`);
+      }
+      if (oldItem.quantity !== newItem.quantity) {
+        changes.push(`quantity from '${oldItem.quantity}' to '${newItem.quantity}'`);
+      }
+      if (oldItem.retail_price !== newItem.retail_price) {
+        changes.push(`retail price from '${oldItem.retail_price || 'N/A'}' to '${newItem.retail_price || 'N/A'}'`);
+      }
+      if (oldItem.retail_price_unit !== newItem.retail_price_unit) {
+        changes.push(`retail price unit from '${oldItem.retail_price_unit || 'N/A'}' to '${newItem.retail_price_unit || 'N/A'}'`);
+      }
+      if (oldItem.wholesale_price !== newItem.wholesale_price) {
+        changes.push(`wholesale price from '${oldItem.wholesale_price || 'N/A'}' to '${newItem.wholesale_price || 'N/A'}'`);
+      }
+      if (oldItem.wholesale_price_unit !== newItem.wholesale_price_unit) {
+        changes.push(`wholesale price unit from '${oldItem.wholesale_price_unit || 'N/A'}' to '${newItem.wholesale_price_unit || 'N/A'}'`);
+      }
+
+      let changeDescription = `Updated item: ${newItem.description || oldItem.description}`;
+      if (changes.length > 0) {
+        changeDescription += ` (changed ${changes.join(', ')})`;
+      }
+
       await updateHardware(editingItem.id, {
         ...item,
         updated_at: new Date().toISOString(),
@@ -133,7 +166,7 @@ const Stock: React.FC<StockProps> = (props) => {
       await addAuditLog({
         id: crypto.randomUUID(),
         item_id: editingItem.id,
-        change_description: `Updated item: ${item.description || editingItem.description}`,
+        change_description: changeDescription,
         created_at: new Date().toISOString(),
         username: 'Giya Hardware',
         is_synced: 0
@@ -245,7 +278,7 @@ const Stock: React.FC<StockProps> = (props) => {
       <TableViewContainer>
         <TableWrapper>
             <StockTable>
-                <thead><tr><th>Description</th><th>Category</th><th>Quantity</th><th>Retail Price</th><th>Wholesale Price</th><th>Actions</th></tr></thead>
+                <thead><tr><th>RP</th><th>Description</th><th>Category</th><th>Qty</th><th>WP</th><th>Actions</th></tr></thead>
                 <tbody>
                     {Array.from({ length: 10 }).map((_, i) => (
                         <tr key={i}>
@@ -306,16 +339,16 @@ const Stock: React.FC<StockProps> = (props) => {
                   <StockTable>
                       <thead>
                           <tr>
-                              <th>Description</th><th>Category</th><th>Quantity</th><th>Retail Price</th><th>Wholesale Price</th><th>Actions</th>
+                              <th>RP</th><th>Description</th><th>Category</th><th>Qty</th><th>WP</th><th>Actions</th>
                           </tr>
                       </thead>
                       <tbody>
                           {paginatedItems.map(item => (
                               <tr key={item.id}>
+                                  <td onClick={() => openDetails(item)}>MK {item.retail_price?.toLocaleString()} {item.retail_price_unit ? `/ ${item.retail_price_unit}` : ''}</td>
                                   <td onClick={() => openDetails(item)}>{item.description}</td>
                                   <td onClick={() => openDetails(item)}>{categories?.find(c => c.id === item.category_id)?.name || 'N/A'}</td>
                                   <td onClick={() => openDetails(item)}>{item.quantity}</td>
-                                  <td onClick={() => openDetails(item)}>MK {item.retail_price?.toLocaleString()} {item.retail_price_unit ? `/ ${item.retail_price_unit}` : ''}</td>
                                   <td onClick={() => openDetails(item)}>MK {item.wholesale_price?.toLocaleString()} {item.wholesale_price_unit ? `/ ${item.wholesale_price_unit}`: ''}</td>
                                   <ActionCell>
                                       <TableEditButton onClick={() => handleEdit(item)} aria-label={`Edit ${item.description}`}><ActionEditIcon /></TableEditButton>

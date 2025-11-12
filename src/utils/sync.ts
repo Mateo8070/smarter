@@ -160,7 +160,7 @@ export const syncWithBackend = async () => {
       const notes = await db.notes.toArray();
       const audit_logs = await db.audit_log.toArray();
 
-                const response = await fetch('https://16.170.212.254:443/api/sync', {        method: 'POST',
+                const response = await fetch('http://16.170.212.254:3004/api/sync', {        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -217,7 +217,7 @@ export const syncWithBackend = async () => {
         }
 
         try {
-      const response = await fetch('https://16.170.212.254:443/api/sync', {
+      const response = await fetch('http://16.170.212.254:3004/api/sync', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
