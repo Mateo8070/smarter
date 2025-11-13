@@ -518,7 +518,7 @@ type Message = Content | CustomAIMessage;
       { role: 'user', parts: [{ text: userText }] },
     ];
 
-    const response = await fetch('http://16.170.212.254:3004/api/chat', {
+    const response = await fetch('https://smart-backend-06fj.onrender.com/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
