@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useDb } from '../hooks/useDb';
 import {
   AuditLogPageContainer,
@@ -11,8 +11,18 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 const AuditLog: React.FC<{ itemId?: string | null }> = ({ itemId }) => {
   const { auditLog, hardware } = useDb();
   
-  const filteredLog = (itemId ? auditLog?.filter(l => l.item_id === itemId) : auditLog)
-    ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const filteredLog = useMemo(() => {
+    if (!auditLog || !hardware) return [];
+
+    const logs = (itemId ? auditLog.filter(l => l.item_id === itemId) : auditLog)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    return logs.filter(log => {
+      const associatedHardware = hardware.find(h => h.id === log.item_id);
+      // If no associated hardware, or if hardware exists and is not deleted, include the log
+      return !associatedHardware || !associatedHardware.is_deleted;
+    });
+  }, [auditLog, hardware, itemId]);
 
   const isMobile = useMediaQuery('(max-width: 768px)');
 

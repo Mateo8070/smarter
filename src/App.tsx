@@ -8,6 +8,9 @@ import AuditLog from './pages/AuditLog';
 import Settings from './pages/Settings';
 import Chatbot from './pages/Chatbot';
 import Modal from './components/Modal';
+import StockForm from './components/StockForm';
+import ConfirmationModal from './components/ConfirmationModal';
+import type { Hardware } from './types/database';
 import { syncWithBackend } from './utils/sync';
 import { ThemeProvider } from 'styled-components';
 import { lightTheme, darkTheme } from './styles/theme';
@@ -84,7 +87,7 @@ const SplashScreen = styled.div`
 `;
 
 function App() {
-  const { hardware } = useDb();
+  const { hardware, categories, addHardware, addAuditLog } = useDb();
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const [page, setPage] = useState('dashboard');
   const [pageHistory, setPageHistory] = useState<string[]>(['dashboard']);
@@ -186,6 +189,21 @@ function App() {
       window.removeEventListener('popstate', handlePopState);
     };
   }, [page, pageHistory]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Standard way to trigger a confirmation dialog
+      event.preventDefault();
+      event.returnValue = ''; // Required for Chrome
+      return ''; // Required for other browsers
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []); // Empty dependency array means this runs once on mount and cleans up on unmount
 
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));

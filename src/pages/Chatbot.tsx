@@ -373,6 +373,7 @@ type Message = Content | CustomAIMessage;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const chatInputRef = useRef<HTMLTextAreaElement>(null); // Add this ref
+  const [isInputEmpty, setIsInputEmpty] = useState(true); // New state for button disabled status
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -472,6 +473,7 @@ type Message = Content | CustomAIMessage;
       chatInputRef.current.value = ''; // Clear input at the start of listening
     }
     setInput(''); // Clear the state as well
+    setIsInputEmpty(true); // Reset the button state
     recognitionRef.current.start();
     setIsListening(true);
   };
@@ -494,6 +496,7 @@ type Message = Content | CustomAIMessage;
     const userText = chatInputRef.current.value;
     setInput(userText); // Update the state for history
     chatInputRef.current.value = ''; // Clear the input field
+    setIsInputEmpty(true); // Reset the button state
 
     // Map current messages to the format expected by the backend (Content[])
     const historyForBackend: Content[] = messages.map(msg => {
@@ -552,6 +555,10 @@ type Message = Content | CustomAIMessage;
         handleSend(e as any);
       }
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setIsInputEmpty(e.target.value.trim() === '');
   };
 
   const handleItemClick = (item: Hardware) => {
@@ -766,13 +773,14 @@ type Message = Content | CustomAIMessage;
           )}
           <ChatInput
             ref={chatInputRef}
+            onChange={handleInputChange}
             onKeyDown={handleKeyPress}
             placeholder="Type or speak..."
             disabled={isLoading}
             rows={1}
           />
         </InputWrapper>
-        <SendButton type="submit" disabled={!input.trim() || isLoading}>
+        <SendButton type="submit" disabled={isInputEmpty || isLoading}>
           <SendIcon />
         </SendButton>
       </InputContainer>

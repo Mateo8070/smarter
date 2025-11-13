@@ -6,7 +6,7 @@ export const StockPageContainer = styled.div`
   position: relative;
 `;
 
-export const PageHeader = styled.div<{ isVisible: boolean }>`
+export const PageHeader = styled.div<{ $isVisible: boolean }>`
   padding: 12px 24px 8px;
   background-color: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -14,7 +14,7 @@ export const PageHeader = styled.div<{ isVisible: boolean }>`
   top: 0;
   z-index: 10;
   transition: transform 0.3s ease-in-out;
-  transform: ${({ isVisible }) => isVisible ? 'translateY(0)' : 'translateY(-100%)'};
+  transform: ${({ $isVisible }) => ($isVisible ? 'translateY(0)' : 'translateY(-100%)')};
   
   @media (max-width: 768px) {
     padding: 12px 16px 8px;
@@ -97,25 +97,6 @@ export const Card = styled.div<{ $isSelectMode?: boolean; $isSelected?: boolean 
     background-color: var(--primary-light); /* Lighter primary color for selected */
     border-color: var(--primary);
     box-shadow: 0 0 0 2px var(--primary); /* Stronger glow for selected */
-  `}
-
-  ${({ $isSelected }) => $isSelected && `
-    &::after {
-      content: '✓';
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background-color: var(--primary);
-      color: white;
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      font-weight: bold;
-    }
   `}
 
   .card-header {
@@ -419,5 +400,56 @@ export const SelectionButton = styled.button`
     &:hover {
       background-color: var(--background);
     }
+  }
+`;
+
+export const CheckboxContainer = styled.div`
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+  display: inline-block;
+  vertical-align: middle;
+  cursor: pointer;
+`;
+
+export const HiddenCheckbox = styled.input.attrs({ type: 'checkbox' })`
+  // Hide checkbox visually but keep it accessible to screen readers
+  border: 0;
+  clip: rect(0 0 0 0);
+  clippath: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+`;
+
+export const CustomCheckbox = styled.div<{ checked: boolean }>`
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: ${({ checked }) => (checked ? 'var(--primary)' : 'var(--surface)')};
+  border-radius: 4px;
+  transition: all 150ms;
+  border: 1px solid ${({ checked }) => (checked ? 'var(--primary)' : 'var(--text-secondary)')};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ${HiddenCheckbox}:focus + & {
+    box-shadow: 0 0 0 3px var(--primary)33;
+  }
+
+  &::after {
+    content: '';
+    display: ${({ checked }) => (checked ? 'block' : 'none')};
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
   }
 `;

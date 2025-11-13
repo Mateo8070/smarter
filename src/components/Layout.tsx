@@ -128,6 +128,7 @@ const Layout: React.FC<LayoutProps> = (props) => {
           showSuggestions={showSuggestions}
           setShowSuggestions={setShowSuggestions}
           handleAiClick={handleAiClick}
+          theme={theme}
         />
         <MainContent ref={mainContentRef}>{children}</MainContent>
       </ContentWrapper>

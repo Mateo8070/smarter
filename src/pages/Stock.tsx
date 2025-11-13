@@ -33,6 +33,8 @@ import {
 } from '../components/Icons';
 import Pagination from '../components/Pagination';
 import Skeleton from '../components/Skeleton';
+import { SelectionActionBar, SelectionCount, SelectionActions, SelectionButton } from './Stock.styles';
+import generateUUID from '../utils/uuid';
 
 const sortOptions = [
   { value: 'description_asc', label: 'Description (A-Z)' },
@@ -72,9 +74,20 @@ const Stock: React.FC<StockProps> = (props) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isSelectMode, setIsSelectMode] = useState(false); // New state for selection mode
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set()); // New state for selected items
-  const [showReassignModal, setShowReassignModal] = useState(false); // New state for reassign modal
-  const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false); // New state for bulk delete confirmation
-  const [itemsToBulkDeleteIds, setItemsToBulkDeleteIds] = useState<string[]>([]); // New state for items to bulk delete
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [itemsToBulkDeleteIds, setItemsToBulkDeleteIds] = useState<string[]>([]);
+  const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
+  const toggleSelectItem = (id: string) => {
+    setSelectedItems(prevSelectedItems => {
+      const newSelectedItems = new Set(prevSelectedItems);
+      if (newSelectedItems.has(id)) {
+        newSelectedItems.delete(id);
+      } else {
+        newSelectedItems.add(id);
+      }
+      return newSelectedItems;
+    });
+  };
 
   // Reset page to 1 when filters or sorting change
   useEffect(() => {
@@ -91,14 +104,12 @@ const Stock: React.FC<StockProps> = (props) => {
     try {
       const newItem: Hardware = {
         ...item,
-        id: crypto.randomUUID(),
-        updated_at: new Date().toISOString(),
-        is_deleted: false,
+        id: generateUUID(),
       } as Hardware;
       await addHardware(newItem);
       
       await addAuditLog({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         item_id: newItem.id,
         change_description: `Created item: ${newItem.description}`,
         created_at: new Date().toISOString(),
@@ -109,6 +120,7 @@ const Stock: React.FC<StockProps> = (props) => {
       setShowForm(false);
       addToast('Stock item added', 'success');
     } catch (error) {
+      console.error("Failed to add item:", error);
       addToast('Failed to add item', 'error');
     }
   };
@@ -170,7 +182,7 @@ const Stock: React.FC<StockProps> = (props) => {
       });
       
       await addAuditLog({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         item_id: editingItem.id,
         change_description: changeDescription,
         created_at: new Date().toISOString(),
@@ -182,6 +194,7 @@ const Stock: React.FC<StockProps> = (props) => {
       setEditingItem(undefined);
       addToast('Stock item updated', 'success');
     } catch (error) {
+      console.error("Failed to update item:", error);
       addToast('Failed to update item', 'error');
     }
   };
@@ -200,7 +213,7 @@ const Stock: React.FC<StockProps> = (props) => {
       await deleteHardware(itemToDeleteId);
       
       await addAuditLog({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         item_id: itemToDeleteId,
         change_description: `Deleted item: ${description}`,
         created_at: new Date().toISOString(),
@@ -212,6 +225,7 @@ const Stock: React.FC<StockProps> = (props) => {
       setItemToDeleteId(null);
       addToast('Stock item deleted', 'success');
     } catch (error) {
+      console.error("Failed to delete item:", error);
       addToast('Failed to delete item', 'error');
     }
   };
@@ -224,7 +238,7 @@ const Stock: React.FC<StockProps> = (props) => {
         const description = itemToDelete?.description || 'Unknown Item';
         await deleteHardware(itemId);
         await addAuditLog({
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           item_id: itemId,
           change_description: `Bulk deleted item: ${description}`,
           created_at: new Date().toISOString(),
@@ -238,6 +252,7 @@ const Stock: React.FC<StockProps> = (props) => {
       setItemsToBulkDeleteIds([]);
       setShowBulkConfirmModal(false);
     } catch (error) {
+      console.error("Failed to bulk delete items:", error);
       addToast('Failed to bulk delete items', 'error');
     }
   };
@@ -251,7 +266,7 @@ const Stock: React.FC<StockProps> = (props) => {
         const newCategory = categories?.find(c => c.id === newCategoryId)?.name || 'N/A';
         await updateHardware(itemId, { category_id: newCategoryId, updated_at: new Date().toISOString() });
         await addAuditLog({
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           item_id: itemId,
           change_description: `Bulk reassigned item: ${itemToUpdate?.description} from category '${oldCategory}' to '${newCategory}'`,
           created_at: new Date().toISOString(),
@@ -264,6 +279,7 @@ const Stock: React.FC<StockProps> = (props) => {
       setSelectedItems(new Set());
       setShowReassignModal(false);
     } catch (error) {
+      console.error("Failed to bulk reassign items:", error);
       addToast('Failed to bulk reassign items', 'error');
     }
   };
@@ -353,7 +369,7 @@ const Stock: React.FC<StockProps> = (props) => {
 
     return (
       <StockPageContainer>
-        <PageHeader isVisible={true}>
+        <PageHeader $isVisible={true}>
           <FilterContainer>
             <Skeleton width="60px" height="34px" style={{ borderRadius: '20px' }} />
             <Skeleton width="100px" height="34px" style={{ borderRadius: '20px' }} />
@@ -371,7 +387,7 @@ const Stock: React.FC<StockProps> = (props) => {
 
   return (
     <StockPageContainer>
-      <PageHeader isVisible={isHeaderVisible}>
+      <PageHeader $isVisible={isHeaderVisible}>
         <FilterContainer>
           <FilterButton $active={!selectedCategoryId} onClick={() => setSelectedCategoryId(null)}>All</FilterButton>
           {categories?.filter(cat => !cat.is_deleted).map(cat => (
@@ -429,7 +445,7 @@ const Stock: React.FC<StockProps> = (props) => {
                 longPressTimer = setTimeout(() => {
                   setIsSelectMode(true);
                   toggleSelectItem(item.id);
-                }, 500); // 500ms for long press
+                }, 1000); // 1000ms for long press
               };
 
               const handlePressEnd = () => {
@@ -456,6 +472,30 @@ const Stock: React.FC<StockProps> = (props) => {
                   onMouseUp={handlePressEnd}
                   onTouchCancel={handlePressEnd} // Handle cases where touch is interrupted
                 >
+                  {isSelectMode && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '10px',
+                      left: '10px',
+                      zIndex: 1,
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectItem(item.id)}
+                        onClick={(e) => e.stopPropagation()} // Prevent card click from firing
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          backgroundColor: 'transparent',
+                          border: '1px solid var(--text-secondary)',
+                          borderRadius: '4px', // Slightly rounded corners
+                          cursor: 'pointer',
+                          // For checked state, we'll rely on browser default or add a custom checkmark later if needed
+                        }}
+                      />
+                    </div>
+                  )}
                   <div className="card-header">
                     <span className="description">{item.description}</span>
                     {category && <span className="category-tag" style={{'--category-color': category.color} as React.CSSProperties}>{category.name}</span>}

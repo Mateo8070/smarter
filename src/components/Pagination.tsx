@@ -11,15 +11,15 @@ const PaginationContainer = styled.nav`
   flex-wrap: wrap;
 `;
 
-const PageButton = styled.button<{ active?: boolean }>`
+const PageButton = styled.button<{ $active?: boolean }>`
   min-width: 40px;
   height: 40px;
   padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
-  background-color: ${({ active }) => (active ? 'var(--primary)' : 'var(--surface)')};
-  color: ${({ active }) => (active ? 'white' : 'var(--text-primary)')};
+  background-color: ${({ $active }) => ($active ? 'var(--primary)' : 'var(--surface)')};
+  color: ${({ $active }) => ($active ? 'white' : 'var(--text-primary)')};
   font-weight: 500;
   font-size: 14px;
   display: flex;
@@ -103,7 +103,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
         typeof page === 'number' ? (
           <PageButton
             key={index}
-            active={currentPage === page}
+            $active={currentPage === page}
             onClick={() => onPageChange(page)}
             aria-label={`Go to page ${page}`}
             aria-current={currentPage === page ? 'page' : undefined}

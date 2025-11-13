@@ -40,7 +40,7 @@ export const BotIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export const CloseIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg {...iconProps} {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+  <svg {...iconProps} {...props} style={{ display: 'block', margin: '0 auto' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 );
 
 export const SyncIcon = (props: React.SVGProps<SVGSVGElement>) => (

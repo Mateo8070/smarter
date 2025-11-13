@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { HamburgerIcon, ArrowLeftIcon, SearchIcon, SortBarsIcon, MoonIcon, SunIcon, LayoutGridIcon, ListIcon, Volume2Icon, VolumeXIcon } from './Icons';
+import { HamburgerIcon, ArrowLeftIcon, SearchIcon, SortBarsIcon, MoonIcon, SunIcon, LayoutGridIcon, ListIcon, Volume2Icon, VolumeXIcon, CloseIcon } from './Icons';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import type { Hardware } from '../types/database';
 
@@ -109,11 +109,35 @@ const SearchWrapper = styled.div`
 const SearchBar = styled.input`
   width: 100%;
   height: 40px;
-  padding: 0 16px 0 44px;
+  padding: 0 44px 0 44px; /* Adjusted padding-right */
   border-radius: 99px;
 
   &:focus, &:focus-visible {
     border-radius: 99px; /* Maintain pill shape on focus */
+  }
+`;
+
+const ClearSearchButton = styled(HeaderButton)<{ theme: 'light' | 'dark' }>`
+  position: absolute;
+  right: 8px;
+  background-color: ${({ theme }) => (theme === 'light' ? 'white' : 'var(--surface)')};
+  color: ${({ theme }) => (theme === 'light' ? 'var(--text-primary)' : 'var(--text-primary)')};
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    transform: translateX(-9px);
   }
 `;
 
@@ -191,6 +215,7 @@ interface AppHeaderProps {
   showSuggestions: boolean;
   setShowSuggestions: (show: boolean) => void;
   handleAiClick?: () => void;
+  theme: 'light' | 'dark';
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
@@ -199,7 +224,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
     isSearchActive, setSearchActive, searchQuery, setSearchQuery,
     hardware, openSortModal,
     viewMode, setViewMode, showSuggestions, setShowSuggestions
-    , handleAiClick
+    , handleAiClick, theme
   } = props;
 
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -254,6 +279,11 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                 placeholder="Search inventory..."
                 autoFocus
               />
+              {searchQuery && (
+                <ClearSearchButton onClick={() => setSearchQuery('')} aria-label="Clear search" theme={theme}>
+                  <CloseIcon />
+                </ClearSearchButton>
+              )}
             </SearchWrapper>
             {showSuggestions && searchSuggestions.length > 0 && (
               <SuggestionsList>
@@ -294,6 +324,11 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                 onFocus={() => setShowSuggestions(true)}
                 placeholder="Search inventory..."
               />
+              {searchQuery && (
+                <ClearSearchButton onClick={() => setSearchQuery('')} aria-label="Clear search" theme={theme}>
+                  <CloseIcon />
+                </ClearSearchButton>
+              )}
             </SearchWrapper>
             {showSuggestions && searchSuggestions.length > 0 && (
               <SuggestionsList>
