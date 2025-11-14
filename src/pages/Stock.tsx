@@ -51,8 +51,6 @@ interface StockProps {
   sortOrder: string;
   setSortOrder: (order: string) => void;
   isDesktop: boolean;
-  isSortModalOpen: boolean;
-  setSortModalOpen: (isOpen: boolean) => void;
   isHeaderVisible: boolean;
   viewMode: 'card' | 'table';
   mainContentRef: React.RefObject<HTMLElement>;
@@ -61,7 +59,7 @@ interface StockProps {
 const ITEMS_PER_PAGE = 50;
 
 const Stock: React.FC<StockProps> = (props) => {
-  const { setPage, searchQuery, sortOrder, setSortOrder, isDesktop, isSortModalOpen, setSortModalOpen, isHeaderVisible, viewMode, mainContentRef } = props;
+  const { setPage, searchQuery, sortOrder, setSortOrder, isDesktop, isHeaderVisible, viewMode, mainContentRef } = props;
   const { hardware, categories, addHardware, updateHardware, deleteHardware, addAuditLog } = useDb();
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Hardware | undefined>(undefined);
@@ -546,16 +544,6 @@ const Stock: React.FC<StockProps> = (props) => {
             initialItem={editingItem} 
             categories={categories || []}
         />
-      </Modal>
-      <Modal isOpen={isSortModalOpen} onClose={() => setSortModalOpen(false)} title="Sort by">
-        <SortModalContent>
-            {sortOptions.map(option => (
-            <SortOption key={option.value} onClick={() => { setSortOrder(option.value); setSortModalOpen(false); }}>
-                <input type="radio" id={option.value} name="sort" value={option.value} checked={sortOrder === option.value} readOnly />
-                <label htmlFor={option.value}>{option.label}</label>
-            </SortOption>
-            ))}
-        </SortModalContent>
       </Modal>
       <ConfirmationModal isOpen={showConfirmModal} onConfirm={handleConfirmDelete} onCancel={() => setShowConfirmModal(false)} title="Confirm Deletion" message="Are you sure you want to delete this stock item? This action cannot be undone." />
       {detailsItem && <ItemDetailsModal

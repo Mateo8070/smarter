@@ -193,25 +193,39 @@ const Sidebar: React.FC<{
 
 
 
-  const handleSync = async () => {
+    const handleSync = async () => {
 
-    addToast('Syncing data...', 'info');
 
-    try {
 
-      await syncWithBackend();
+      try {
 
-      addToast('Sync complete!', 'success');
 
-    } catch (error) {
 
-      console.error('Sync failed:', error);
+        await syncWithBackend();
 
-      addToast('Sync failed. Check console for details.', 'error');
 
-    }
 
-  };
+        addToast('Sync complete!', 'success');
+
+
+
+      } catch (error) {
+
+
+
+        console.error('Sync failed:', error);
+
+
+
+        addToast('Sync failed. Check console for details.', 'error');
+
+
+
+      }
+
+
+
+    };
 
 
 

@@ -1,6 +1,6 @@
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import { HamburgerIcon, ArrowLeftIcon, SearchIcon, SortBarsIcon, MoonIcon, SunIcon, LayoutGridIcon, ListIcon, Volume2Icon, VolumeXIcon, CloseIcon } from './Icons';
+import { HamburgerIcon, ArrowLeftIcon, SearchIcon, SortBarsIcon, MoonIcon, SunIcon, LayoutGridIcon, ListIcon, Volume2Icon, VolumeXIcon, CloseIcon, HomeIcon, ArrowRightIcon } from './Icons';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import type { Hardware } from '../types/database';
 
@@ -60,7 +60,9 @@ const HeaderButton = styled.button`
   border: none;
   cursor: pointer;
   color: var(--text-secondary);
-  padding: 8px;
+  padding: 0;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -197,6 +199,111 @@ const ViewModeButton = styled(HeaderButton)<{ $active?: boolean }>`
   }
 `;
 
+// New Mobile Header Styles
+const MobileHeaderWrapper = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+`;
+
+const MobileHeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const MobileHeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const MobilePageTitle = styled.h1`
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+`;
+
+const SortButtonContainer = styled.button`
+  position: relative; // Added for dropdown positioning
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; // Changed from flex-end to flex-start
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+`;
+
+const SortByText = styled.span`
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const SortCriteriaText = styled.span`
+  font-size: 12px;
+  color: var(--text-tertiary); // A lighter color for secondary info
+`;
+
+const SortDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0; // Align left with the button
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 8px;
+  padding: 8px;
+  list-style: none;
+  box-shadow: 0 44px 12px rgba(0,0,0,0.1);
+  z-index: 10;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const SortDropdownItem = styled.div`
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; // To push the checkmark to the right
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+
+  &:hover {
+    background-color: var(--background);
+    color: var(--text-primary);
+  }
+
+  &.active {
+    background-color: var(--primary);
+    color: white;
+    font-weight: 600;
+  }
+`;
+
 interface AppHeaderProps {
   pageTitle: string;
   toggleSidebar: () => void;
@@ -204,32 +311,37 @@ interface AppHeaderProps {
   canGoBack: boolean;
   $isSidebarOpen: boolean;
   page: string;
+  setPage: (page: string) => void;
   isSearchActive: boolean;
   setSearchActive: (active: boolean) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   hardware: Hardware[];
-  openSortModal: () => void;
+  setSortOrder: (order: string) => void;
   viewMode: 'card' | 'table';
   setViewMode: (mode: 'card' | 'table') => void;
   showSuggestions: boolean;
   setShowSuggestions: (show: boolean) => void;
   handleAiClick?: () => void;
   theme: 'light' | 'dark';
+  toggleTheme: () => void;
+  sortOrder: string; // Added sortOrder to props
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
   const {
-    pageTitle, toggleSidebar, goBack, canGoBack, $isSidebarOpen, page,
+    pageTitle, toggleSidebar, goBack, canGoBack, $isSidebarOpen, page, setPage,
     isSearchActive, setSearchActive, searchQuery, setSearchQuery,
-    hardware, openSortModal,
+    hardware, setSortOrder,
     viewMode, setViewMode, showSuggestions, setShowSuggestions
-    , handleAiClick, theme
+    , handleAiClick, theme, toggleTheme, sortOrder
   } = props;
 
   const isMobile = useMediaQuery('(max-width: 768px)');
   const isStockPage = page === 'stock';
   const searchRef = useRef<HTMLDivElement>(null);
+  const sortButtonRef = useRef<HTMLButtonElement>(null); // Added
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false); // Added
 
   const searchSuggestions = useMemo(() => {
     if (!searchQuery || searchQuery.length < 2) return [];
@@ -246,10 +358,14 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         }
         setShowSuggestions(false);
       }
+      // Close sort dropdown if click is outside
+      if (sortButtonRef.current && !sortButtonRef.current.contains(event.target as Node)) {
+        setIsSortDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isMobile, setSearchActive, setShowSuggestions]);
+  }, [isMobile, setSearchActive, setShowSuggestions, sortButtonRef, setIsSortDropdownOpen]); // Dependencies updated
 
   const handleSuggestionClick = (description: string) => {
     setSearchQuery(description);
@@ -259,47 +375,127 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
     }
   };
 
-  const showDesktopSearch = isStockPage && !isMobile;
-  const showTitle = !isSearchActive && (!isStockPage || (isStockPage && isMobile));
+  const getSortDisplayText = useMemo(() => {
+    switch (sortOrder) {
+      case 'description_asc': return 'Description (A-Z)';
+      case 'description_desc': return 'Description (Z-A)';
+      case 'quantity_asc': return 'Quantity (Low to High)';
+      case 'quantity_desc': return 'Quantity (High to Low)';
+      case 'retail_price_asc': return 'Retail Price (Low to High)';
+      case 'retail_price_desc': return 'Retail Price (High to Low)';
+      default: return 'Description (A-Z)';
+    }
+  }, [sortOrder]);
 
-  if (isMobile && isSearchActive && isStockPage) {
+  const sortOptions = [ // Added
+    { value: 'description_asc', label: 'Description (A-Z)' },
+    { value: 'description_desc', label: 'Description (Z-A)' },
+    { value: 'quantity_asc', label: 'Quantity (Low to High)' },
+    { value: 'quantity_desc', label: 'Quantity (High to Low)' },
+    { value: 'retail_price_asc', label: 'Retail Price (Low to High)' },
+    { value: 'retail_price_desc', label: 'Retail Price (High to Low)' },
+  ];
+
+  // Mobile Header Implementation
+  if (isMobile) {
+    if (isSearchActive && isStockPage) {
+      return (
+        <HeaderContainer>
+          <HeaderContent style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <HeaderButton onClick={() => { setSearchActive(false); setSearchQuery(''); }}>
+              <ArrowLeftIcon />
+            </HeaderButton>
+            <SearchContainer ref={searchRef} style={{flex: 1, margin: 0, gridColumn: 'unset'}}>
+              <SearchWrapper>
+                <SearchIcon />
+                <SearchBar
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setShowSuggestions(true)}
+                  placeholder="Search inventory..."
+                  autoFocus
+                />
+                {searchQuery && (
+                  <ClearSearchButton onClick={() => setSearchQuery('')} aria-label="Clear search" theme={theme}>
+                    <CloseIcon />
+                  </ClearSearchButton>
+                )}
+              </SearchWrapper>
+              {showSuggestions && searchSuggestions.length > 0 && (
+                <SuggestionsList>
+                  {searchSuggestions.map(item => (
+                    <SuggestionItem key={item.id} onClick={() => handleSuggestionClick(item.description || '')}>
+                      {item.description}
+                    </SuggestionItem>
+                  ))}
+                </SuggestionsList>
+              )}
+            </SearchContainer>
+          </HeaderContent>
+        </HeaderContainer>
+      );
+    }
+
     return (
       <HeaderContainer>
-        <HeaderContent style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <HeaderButton onClick={() => { setSearchActive(false); setSearchQuery(''); }}>
-            <ArrowLeftIcon />
-          </HeaderButton>
-          <SearchContainer ref={searchRef} style={{flex: 1, margin: 0, gridColumn: 'unset'}}>
-            <SearchWrapper>
-              <SearchIcon />
-              <SearchBar
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setShowSuggestions(true)}
-                placeholder="Search inventory..."
-                autoFocus
-              />
-              {searchQuery && (
-                <ClearSearchButton onClick={() => setSearchQuery('')} aria-label="Clear search" theme={theme}>
-                  <CloseIcon />
-                </ClearSearchButton>
-              )}
-            </SearchWrapper>
-            {showSuggestions && searchSuggestions.length > 0 && (
-              <SuggestionsList>
-                {searchSuggestions.map(item => (
-                  <SuggestionItem key={item.id} onClick={() => handleSuggestionClick(item.description || '')}>
-                    {item.description}
-                  </SuggestionItem>
-                ))}
-              </SuggestionsList>
+        <MobileHeaderWrapper>
+          <MobileHeaderLeft>
+            {page !== 'dashboard' && (
+              <HeaderButton onClick={() => setPage('dashboard')} aria-label="Go home">
+                <HomeIcon />
+              </HeaderButton>
             )}
-          </SearchContainer>
-          <div style={{ width: '40px', flexShrink: 0 }} />
-        </HeaderContent>
+            {isStockPage ? (
+              <SortButtonContainer ref={sortButtonRef} onClick={() => setIsSortDropdownOpen(prev => !prev)} aria-label="Sort by criteria">
+                <SortByText>
+                  Sort By <span style={{ fontSize: '0.8em', lineHeight: '1', marginLeft: '4px' }}>▼</span>
+                </SortByText>
+                <SortCriteriaText>{getSortDisplayText}</SortCriteriaText>
+                {isSortDropdownOpen && (
+                  <SortDropdown>
+                    {sortOptions.map(option => (
+                      <SortDropdownItem
+                        key={option.value}
+                        className={sortOrder === option.value ? 'active' : ''}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent SortButtonContainer's onClick from firing again
+                          setSortOrder(option.value);
+                          setIsSortDropdownOpen(false);
+                        }}
+                      >
+                        {option.label}
+                      </SortDropdownItem>
+                    ))}
+                  </SortDropdown>
+                )}
+              </SortButtonContainer>
+            ) : (
+              <MobilePageTitle>{page === 'dashboard' ? 'Home' : pageTitle}</MobilePageTitle>
+            )}
+          </MobileHeaderLeft>
+          <MobileHeaderRight>
+            {isStockPage && (
+              <HeaderButton onClick={() => setSearchActive(true)} aria-label="Search">
+                <SearchIcon />
+              </HeaderButton>
+            )}
+            {page === 'dashboard' && (
+              <HeaderButton onClick={toggleTheme} aria-label="Toggle theme">
+                {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+              </HeaderButton>
+            )}
+            <HeaderButton onClick={toggleSidebar} aria-label="Toggle sidebar">
+              <HamburgerIcon />
+            </HeaderButton>
+          </MobileHeaderRight>
+        </MobileHeaderWrapper>
       </HeaderContainer>
     );
   }
+
+  // Desktop Header Implementation
+  const showDesktopSearch = isStockPage && !isMobile;
+  const showTitle = !isSearchActive && (!isStockPage || (isStockPage && isMobile));
 
   return (
     <HeaderContainer>
@@ -340,6 +536,13 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
               </SuggestionsList>
             )}
           </SearchContainer>
+        ) : isStockPage && !isMobile && !isSearchActive ? (
+          <SortButtonContainer ref={sortButtonRef} onClick={() => setIsSortDropdownOpen(prev => !prev)} aria-label="Sort by criteria">
+            <SortByText>
+              Sort By <ArrowRightIcon style={{ transform: 'rotate(90deg)' }} />
+            </SortByText>
+            <SortCriteriaText>{getSortDisplayText}</SortCriteriaText>
+          </SortButtonContainer>
         ) : showTitle ? (
           <PageTitle>{pageTitle}</PageTitle>
         ) : <div /> /* Empty div to balance the grid */}
@@ -357,15 +560,17 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                   </ViewModeButton>
                 </ViewModeContainer>
               )}
-              <HeaderButton onClick={openSortModal} aria-label="Sort">
-                <SortBarsIcon />
-              </HeaderButton>
               {isMobile && (
                  <HeaderButton onClick={() => setSearchActive(true)} aria-label="Search">
                     <SearchIcon />
                 </HeaderButton>
               )}
             </StockActionsContainer>
+          )}
+          {page === 'dashboard' && (
+            <HeaderButton onClick={toggleTheme} aria-label="Toggle theme">
+              {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+            </HeaderButton>
           )}
           {!$isSidebarOpen && isMobile && (
             <HeaderButton onClick={toggleSidebar} aria-label="Toggle sidebar"><HamburgerIcon /></HeaderButton>

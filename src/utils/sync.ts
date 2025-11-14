@@ -178,72 +178,23 @@ export const syncWithBackend = async () => {
       throw error;
     }
   };
-  const SYNC_INTERVAL = 5000; // Sync every 5 seconds
-
   export const useSync = () => {
-    const { addToast } = useToast();
-    const lastSyncRef = useRef<number>(0);
+  const { addToast } = useToast();
+  const SYNC_INTERVAL = 14 * 60 * 1000; // 14 minutes
 
-    const categories = useLiveQuery(() => db.categories.where('is_deleted').equals(0).toArray(), []);
-    const hardware = useLiveQuery(() => db.hardware.where('is_deleted').equals(0).toArray(), []);
-    const notes = useLiveQuery(() => db.notes.where('is_deleted').equals(0).toArray(), []);
-    const auditLogs = useLiveQuery(() => db.audit_log.where('is_synced').equals(0).toArray(), []);
+  useEffect(() => {
+    const periodicSync = async () => {
+      try {
+        await syncToLocalBackend();
+        // No success toast for automatic background sync
+      } catch (error) {
+        console.error('Periodic sync failed:', error);
+        addToast('Automatic background sync failed.', 'error');
+      }
+    };
 
-    useEffect(() => {
-      const syncData = async () => {
-        const now = Date.now();
-        if (now - lastSyncRef.current < SYNC_INTERVAL) {
-          return; // Too soon to sync again
-        }
+    const intervalId = setInterval(periodicSync, SYNC_INTERVAL);
 
-        const dataToSync: { [key: string]: any[] } = {};
-
-        if (categories && categories.length > 0) {
-          dataToSync.categories = categories;
-        }
-        if (hardware && hardware.length > 0) {
-          dataToSync.hardware = hardware;
-        }
-        if (notes && notes.length > 0) {
-          dataToSync.notes = notes;
-        }
-        if (auditLogs && auditLogs.length > 0) {
-          dataToSync.audit_logs = auditLogs;
-        }
-
-        if (Object.keys(dataToSync).length === 0) {
-          // console.log("No data to sync.");
-          return;
-        }
-
-        try {
-      const response = await fetch('https://smart-backend-06fj.onrender.com/api/sync', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(dataToSync),
-          });
-
-          if (response.ok) {
-            // Mark audit logs as synced after successful sync
-            if (dataToSync.audit_logs) {
-              const syncedLogIds = dataToSync.audit_logs.map(log => log.id);
-              await db.audit_log.where('id').anyOf(syncedLogIds).modify({ is_synced: 1 });
-            }
-            // addToast('Sync successful', 'success');
-            lastSyncRef.current = now;
-          } else {
-            addToast('Sync failed', 'error');
-          }
-        } catch (error) {
-          console.error('Sync error:', error);
-          addToast('Sync error', 'error');
-        }
-      };
-
-      const intervalId = setInterval(syncData, SYNC_INTERVAL);
-
-      return () => clearInterval(intervalId);
-    }, [categories, hardware, notes, auditLogs, addToast]);
-  };
+    return () => clearInterval(intervalId);
+  }, [addToast]);
+};

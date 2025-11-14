@@ -1,3 +1,4 @@
+// Force TypeScript re-evaluation
 import React, { useRef, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import styled from 'styled-components';
@@ -50,7 +51,8 @@ interface LayoutProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   hardware: Hardware[];
-  openSortModal: () => void;
+  sortOrder: string;
+  setSortOrder: (order: string) => void;
   isHeaderVisible: boolean;
   setIsHeaderVisible: (visible: boolean) => void;
   viewMode: 'card' | 'table';
@@ -65,7 +67,7 @@ const Layout: React.FC<LayoutProps> = (props) => {
   const {
     children, pageTitle, setPage, toggleTheme, theme, $isSidebarOpen, toggleSidebar, goBack, canGoBack, page,
     isSearchActive, setSearchActive, searchQuery, setSearchQuery, hardware,
-    openSortModal, isHeaderVisible, setIsHeaderVisible, viewMode, setViewMode,
+    sortOrder, setSortOrder, isHeaderVisible, setIsHeaderVisible, viewMode, setViewMode,
     showSuggestions, setShowSuggestions, handleAiClick, mainContentRef
   } = props;
 
@@ -117,18 +119,21 @@ const Layout: React.FC<LayoutProps> = (props) => {
           canGoBack={canGoBack}
           $isSidebarOpen={$isSidebarOpen}
           page={page}
+          setPage={setPage}
           isSearchActive={isSearchActive}
           setSearchActive={setSearchActive}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           hardware={hardware}
-          openSortModal={openSortModal}
+          sortOrder={sortOrder}
+          setSortOrder={setSortOrder}
           viewMode={viewMode}
           setViewMode={setViewMode}
           showSuggestions={showSuggestions}
           setShowSuggestions={setShowSuggestions}
           handleAiClick={handleAiClick}
           theme={theme}
+          toggleTheme={toggleTheme}
         />
         <MainContent ref={mainContentRef}>{children}</MainContent>
       </ContentWrapper>
