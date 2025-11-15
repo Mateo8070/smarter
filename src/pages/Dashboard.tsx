@@ -278,12 +278,12 @@ const Dashboard: React.FC<DashboardProps> = ({ setPage, handleAiClick, hardware,
     ).length;
     const totalCategories = categories.filter(cat => !cat.is_deleted).length; // Modified
     const outOfStockItems = hardware.filter(item => !item.is_deleted && isOutOfStock(item.quantity)).length;
-  
+
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const recentAuditLogs = auditLog.filter(log => new Date(log.created_at) > sevenDaysAgo).length;
     const totalAuditLogs = auditLog.length; // New calculation
-  
+
     // Calculate category breakdown for pie chart
     const categoryData = categories
       .filter(cat => !cat.is_deleted)
@@ -294,13 +294,12 @@ const Dashboard: React.FC<DashboardProps> = ({ setPage, handleAiClick, hardware,
       .filter(data => data.value > 0); // Only show categories with items
 
     const isMobile = useMediaQuery('(max-width: 480px)'); // Define mobile breakpoint
-    
+
     return (
       <DashboardContainer>
         <WelcomeHeader>
-          <WelcomeTitle>Smart Stock</WelcomeTitle>
         </WelcomeHeader>
-  
+
         <InfoGrid>
           <InfoCard onClick={() => handleClick('stock')}>
             <InfoLabel>Total Items</InfoLabel>
@@ -320,7 +319,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setPage, handleAiClick, hardware,
             <InfoValue>{totalAuditLogs}</InfoValue>
           </InfoCard>
         </InfoGrid>
-  
+
         <ChartContainer>
           <ChartTitle>Items by Category</ChartTitle>
           {categoryData.length > 0 ? (
