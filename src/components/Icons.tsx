@@ -1,8 +1,8 @@
 import React from 'react';
 
 const iconProps: React.SVGProps<SVGSVGElement> = {
-  width: "24",
-  height: "24",
+  width: "30",
+  height: "30",
   viewBox: "0 0 24 24",
   fill: "none",
   stroke: "currentColor",
@@ -84,7 +84,7 @@ export const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export const SendIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg {...iconProps} {...props} width="20" height="20"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9 22,2"/></svg>
+  <svg {...iconProps} {...props}><line x1="10" y1="10" x2="11" y2="10"/><polygon points="22,2 15,22 11,13 2,9 22,2"/></svg>
 );
 
 export const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -94,7 +94,7 @@ export const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export const LayoutGridIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...iconProps} {...props}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
 );
-  
+
 export const ListIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...iconProps} {...props}><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
 );

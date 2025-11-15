@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import { HamburgerIcon, ArrowLeftIcon, SearchIcon, SortBarsIcon, MoonIcon, SunIcon, LayoutGridIcon, ListIcon, Volume2Icon, VolumeXIcon, CloseIcon, HomeIcon, ArrowRightIcon } from './Icons';
+import { HamburgerIcon, ArrowLeftIcon, SearchIcon, SortBarsIcon, MoonIcon, SunIcon, LayoutGridIcon, ListIcon, Volume2Icon, VolumeXIcon, CloseIcon, HomeIcon, ArrowRightIcon, TrashIcon } from './Icons';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import type { Hardware } from '../types/database';
 
@@ -326,6 +326,7 @@ interface AppHeaderProps {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   sortOrder: string; // Added sortOrder to props
+  onClearChatbot?: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
@@ -334,7 +335,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
     isSearchActive, setSearchActive, searchQuery, setSearchQuery,
     hardware, setSortOrder,
     viewMode, setViewMode, showSuggestions, setShowSuggestions
-    , handleAiClick, theme, toggleTheme, sortOrder
+    , handleAiClick, theme, toggleTheme, sortOrder, onClearChatbot
   } = props;
 
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -479,6 +480,11 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                 <SearchIcon />
               </HeaderButton>
             )}
+            {page === 'chatbot' && onClearChatbot && (
+              <HeaderButton onClick={onClearChatbot} aria-label="Clear conversation">
+                <TrashIcon />
+              </HeaderButton>
+            )}
             {page === 'dashboard' && (
               <HeaderButton onClick={toggleTheme} aria-label="Toggle theme">
                 {theme === 'light' ? <MoonIcon /> : <SunIcon />}
@@ -548,6 +554,11 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         ) : <div /> /* Empty div to balance the grid */}
 
         <ActionsContainer className="right">
+          {page === 'chatbot' && onClearChatbot && (
+            <HeaderButton onClick={onClearChatbot} aria-label="Clear conversation">
+              <TrashIcon />
+            </HeaderButton>
+          )}
           {isStockPage && (!isMobile || !isSearchActive) && (
             <StockActionsContainer>
                {!isMobile && (

@@ -47,7 +47,7 @@ const ChatPageContainer = styled.div<{ $isModal?: boolean }>`
   flex-direction: column;
   height: 100%;
   flex: 1;
-  max-height: ${({ $isModal }) => $isModal ? '90vh' : '100%'};
+  max-height: ${({ $isModal }) => ($isModal ? '90vh' : '100%')};
 
   @media (min-width: 768px) {
     height: 100%; /* Full height for desktop */
@@ -175,7 +175,7 @@ const ItemTable = styled.table<{ $zebra?: boolean }>`
       word-break: break-word;
     }
   }
-  
+
   tbody tr {
     cursor: pointer;
     &:hover {
@@ -258,8 +258,8 @@ const MicButton = styled.button`
   background-color: transparent;
   color: var(--text-secondary);
   border: none;
-  width: 40px;
-  height: 40px;
+  width: 40px; /* Reverted size */
+  height: 40px; /* Reverted size */
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -272,7 +272,7 @@ const MicButton = styled.button`
     color: var(--text-primary);
   }
   &.mic-active { color: var(--danger); }
-  svg { width: 20px; height: 20px; }
+  svg { width: 32px; height: 32px; flex-shrink: 0; } /* Set icon size to 32px */
 
   @media (max-width: 767px) {
     left: 0px; /* Moved closer to the edge */
@@ -283,8 +283,8 @@ const SendButton = styled.button`
   background-color: var(--primary);
   color: white;
   border: none;
-  width: 44px;
-  height: 44px;
+  width: 48px; /* Reverted size */
+  height: 48px; /* Reverted size */
   flex-shrink: 0;
   border-radius: 50%;
   cursor: pointer;
@@ -298,6 +298,7 @@ const SendButton = styled.button`
     cursor: not-allowed;
     transform: scale(0.9);
   }
+  svg { width: 32px; height: 32px; flex-shrink: 0; } /* Set icon size to 32px */
 `;
 
 const ClearButton = styled.button`
@@ -339,9 +340,10 @@ interface ChatbotProps {
   isModal?: boolean;
   setPage: (page: string, payload?: { auditItemId?: string }) => void;
   openStockFormWithAIItem: (item: Hardware) => void;
+  onClearRef: React.MutableRefObject<(() => void) | null>;
 }
 
-const Chatbot: React.FC<ChatbotProps> = ({ isModal, setPage }) => {
+const Chatbot: React.FC<ChatbotProps> = ({ isModal, setPage, openStockFormWithAIItem, onClearRef }) => {
   const { addToast } = useToast();
   // --- Custom Message Type for Structured Responses ---
 interface CustomAIMessage {
@@ -353,6 +355,7 @@ interface CustomAIMessage {
     text?: string;
     data?: any[];
     itemData?: Hardware; // Added for add_item_suggestion
+    renderHint?: string; // Added for renderHint
   };
 }
 
@@ -409,6 +412,13 @@ type Message = Content | CustomAIMessage;
     localStorage.removeItem('chatHistory');
   };
 
+  useEffect(() => {
+    onClearRef.current = handleClear;
+    return () => {
+      onClearRef.current = null;
+    };
+  }, [onClearRef, handleClear]);
+
 
   const handleMouseDown = () => {
     handleListen();
@@ -440,31 +450,26 @@ type Message = Content | CustomAIMessage;
     }
     if (!recognitionRef.current) {
       const recognition = new SpeechRecognitionAPI();
-      recognition.continuous = true; 
-      recognition.interimResults = true; 
+      recognition.continuous = true;
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + ' ';
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        
-        if (chatInputRef.current) {
-          chatInputRef.current.value = finalTranscript + interimTranscript;
-        }
-        if (finalTranscript) {
-          setInput(finalTranscript.trim()); // Update state only with final transcript
-        }
-      };
-
+            recognition.onresult = (event: SpeechRecognitionEvent) => {
+              let interimTranscript = '';
+              let finalTranscript = '';
+      
+              for (let i = event.resultIndex; i < event.results.length; ++i) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                  finalTranscript += transcript + ' ';
+                } else {
+                  interimTranscript += transcript;
+                }
+              }
+              
+              // Update the input state with both final and interim transcripts
+              setInput((finalTranscript + interimTranscript).trim());
+            };
       recognition.onend = () => setIsListening(false);
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => handleError(event);
       recognitionRef.current = recognition;
@@ -493,9 +498,8 @@ type Message = Content | CustomAIMessage;
     e.preventDefault();
     if (!chatInputRef.current || !chatInputRef.current.value.trim() || isLoading) return;
 
-    const userText = chatInputRef.current.value;
-    setInput(userText); // Update the state for history
-    chatInputRef.current.value = ''; // Clear the input field
+    const userText = input; // Use the current input state
+    setInput(''); // Clear the input field directly
     setIsInputEmpty(true); // Reset the button state
 
     // Map current messages to the format expected by the backend (Content[])
@@ -603,7 +607,6 @@ type Message = Content | CustomAIMessage;
 
   return (
     <ChatPageContainer $isModal={isModal}>
-
       <MessagesContainer>
         {messages.length === 0 && !isLoading && (
           <WelcomeScreen>
@@ -628,7 +631,7 @@ type Message = Content | CustomAIMessage;
             // --- Query result rendering ---
             if (respType === 'query_result' && data && Array.isArray(data)) {
               // Helper to check if an object is likely a hardware item
-              const isHardwareItem = (item: any): item is Hardware => 
+              const isHardwareItem = (item: any): item is Hardware =>
                 item && typeof item === 'object' && 'description' in item && 'quantity' in item && 'retail_price' in item && 'id' in item;
 
               // Use card view only for a small number of hardware items
@@ -773,6 +776,7 @@ type Message = Content | CustomAIMessage;
           )}
           <ChatInput
             ref={chatInputRef}
+            value={input} // Bind value to state
             onChange={handleInputChange}
             onKeyDown={handleKeyPress}
             placeholder="Type or speak..."

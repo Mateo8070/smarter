@@ -30,7 +30,7 @@ const PageButton = styled.button<{ $active?: boolean }>`
   &:hover:not(:disabled) {
     border-color: var(--primary);
     color: var(--primary);
-    background-color: ${({ active }) => (active ? 'var(--primary)' : 'var(--surface-variant)')};
+    background-color: ${({ $active }) => ($active ? 'var(--primary)' : 'var(--surface-variant)')};
   }
 
   &:disabled {

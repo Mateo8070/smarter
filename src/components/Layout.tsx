@@ -61,6 +61,7 @@ interface LayoutProps {
   setShowSuggestions: (show: boolean) => void;
   handleAiClick: () => void;
   mainContentRef: React.RefObject<HTMLElement>;
+  onClearChatbot: (() => void) | undefined;
 }
 
 const Layout: React.FC<LayoutProps> = (props) => {
@@ -68,7 +69,7 @@ const Layout: React.FC<LayoutProps> = (props) => {
     children, pageTitle, setPage, toggleTheme, theme, $isSidebarOpen, toggleSidebar, goBack, canGoBack, page,
     isSearchActive, setSearchActive, searchQuery, setSearchQuery, hardware,
     sortOrder, setSortOrder, isHeaderVisible, setIsHeaderVisible, viewMode, setViewMode,
-    showSuggestions, setShowSuggestions, handleAiClick, mainContentRef
+    showSuggestions, setShowSuggestions, handleAiClick, mainContentRef, onClearChatbot
   } = props;
 
   const lastScrollY = useRef(0);
@@ -134,6 +135,7 @@ const Layout: React.FC<LayoutProps> = (props) => {
           handleAiClick={handleAiClick}
           theme={theme}
           toggleTheme={toggleTheme}
+          onClearChatbot={onClearChatbot}
         />
         <MainContent ref={mainContentRef}>{children}</MainContent>
       </ContentWrapper>

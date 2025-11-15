@@ -7,6 +7,7 @@ import Categories from './pages/Categories';
 import AuditLog from './pages/AuditLog';
 import Settings from './pages/Settings';
 import Chatbot from './pages/Chatbot';
+import OutOfStockItems from './pages/OutOfStockItems'; // New import
 import Modal from './components/Modal';
 import StockForm from './components/StockForm';
 import ConfirmationModal from './components/ConfirmationModal';
@@ -87,7 +88,7 @@ const SplashScreen = styled.div`
 `;
 
 const AppContent: React.FC = () => {
-  const { hardware, categories, addHardware, addAuditLog } = useDb();
+  const { hardware, categories, auditLog, addHardware, addAuditLog } = useDb();
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const [page, setPage] = useState('dashboard');
   const [pageHistory, setPageHistory] = useState<string[]>(['dashboard']);
@@ -98,6 +99,7 @@ const AppContent: React.FC = () => {
   const [showStockForm, setShowStockForm] = useState(false); // New state to control StockForm visibility
   const [aiSuggestedItem, setAiSuggestedItem] = useState<Hardware | null>(null); // New state for AI suggested item
   const [showExitConfirmModal, setShowExitConfirmModal] = useState(false); // New state for exit confirmation modal
+  const [showClearChatConfirmModal, setShowClearChatConfirmModal] = useState(false); // New state for clear chat confirmation modal
 
   // State lifted from Stock page
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,6 +111,7 @@ const AppContent: React.FC = () => {
   const mainContentRef = useRef<HTMLElement>(null);
   const { addToast } = useToast();
   const initialSyncStarted = useRef(false);
+  const chatbotClearRef = useRef<(() => void) | null>(null); // New ref for chatbot clear function
 
   // Activate periodic sync
   useSync();
@@ -130,6 +133,18 @@ const AppContent: React.FC = () => {
 
   const handleAiClick = () => {
     setPageWithHistory('chatbot');
+  };
+
+  const handleClearChatbotFromHeader = () => {
+    setShowClearChatConfirmModal(true);
+  };
+
+  const confirmClearChat = () => {
+    if (chatbotClearRef.current) {
+      chatbotClearRef.current();
+      addToast('Chat history cleared!', 'success');
+    }
+    setShowClearChatConfirmModal(false);
   };
 
   const openStockFormWithAIItem = (item: Hardware) => {
@@ -233,11 +248,18 @@ const AppContent: React.FC = () => {
     'audit-log': 'Audit Log',
     settings: 'Settings',
     chatbot: 'AI Assistant',
+    'out-of-stock': 'Out of Stock Items', // Updated page title
   };
 
   const renderPage = () => {
     switch (page) {
-      case 'dashboard': return <Dashboard setPage={setPageWithHistory} handleAiClick={handleAiClick} />;
+      case 'dashboard': return <Dashboard
+        setPage={setPageWithHistory}
+        handleAiClick={handleAiClick}
+        hardware={hardware || []}
+        categories={categories || []}
+        auditLog={auditLog || []}
+      />;
       case 'stock': return <Stock
         setPage={setPageWithHistory}
         searchQuery={searchQuery}
@@ -252,8 +274,15 @@ const AppContent: React.FC = () => {
       case 'categories': return <Categories />;
       case 'audit-log': return <AuditLog itemId={auditFilterItemId} />;
       case 'settings': return <Settings />;
-      case 'chatbot': return <Chatbot setPage={setPageWithHistory} openStockFormWithAIItem={openStockFormWithAIItem} />;
-      default: return <Dashboard setPage={setPageWithHistory} handleAiClick={handleAiClick} />;
+      case 'chatbot': return <Chatbot setPage={setPageWithHistory} openStockFormWithAIItem={openStockFormWithAIItem} onClearRef={chatbotClearRef} />;
+      case 'out-of-stock': return <OutOfStockItems hardware={hardware || []} setPage={setPageWithHistory} />; // Pass setPage
+      default: return <Dashboard
+        setPage={setPageWithHistory}
+        handleAiClick={handleAiClick}
+        hardware={hardware || []}
+        categories={categories || []}
+        auditLog={auditLog || []}
+      />;
     }
   };
 
@@ -310,6 +339,7 @@ const AppContent: React.FC = () => {
             setShowSuggestions={setShowSuggestions}
             handleAiClick={handleAiClick}
             mainContentRef={mainContentRef}
+            onClearChatbot={handleClearChatbotFromHeader}
           >
             {renderPage()}
           </Layout>
@@ -360,6 +390,14 @@ const AppContent: React.FC = () => {
             }}
             title="Exit Smart Stock?"
             message="Are you sure you want to exit Smart Stock?"
+          />
+
+          <ConfirmationModal
+            isOpen={showClearChatConfirmModal}
+            onConfirm={confirmClearChat}
+            onCancel={() => setShowClearChatConfirmModal(false)}
+            title="Clear Chat History?"
+            message="Are you sure you want to clear the entire chat conversation? This action cannot be undone."
           />
         </>
       )}
