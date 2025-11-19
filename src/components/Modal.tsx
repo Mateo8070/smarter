@@ -70,8 +70,8 @@ const CloseButton = styled.button`
   transition: background-color 0.2s, color 0.2s;
   
   &:hover {
-    background-color: var(--background);
-    color: var(--text-primary);
+    background-color: var(--surface-variant);
+    color: var(--primary);
   }
 
   svg {
