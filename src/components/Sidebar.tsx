@@ -1,6 +1,6 @@
 import React from 'react';
 import styled, { useTheme } from 'styled-components';
-import { syncWithBackend } from '../utils/sync';
+import { syncWithBackend, syncToLocalBackend } from '../utils/sync';
 import { useToast } from './Toast';
 import {
   HomeIcon,
@@ -191,47 +191,19 @@ const Sidebar: React.FC<{
 
   const { addToast } = useToast();
 
-
-
-    const handleSync = async () => {
-
-
-
-      try {
-
-
-
-        await syncWithBackend();
-
-
-
-        addToast('Sync complete!', 'success');
-
-
-
-      } catch (error) {
-
-
-
-        console.error('Sync failed:', error);
-
-
-
-        addToast('Sync failed. Check console for details.', 'error');
-
-
-
-      }
-
-
-
-    };
-
-
+  const handleSync = async () => {
+    addToast('Starting sync...', 'info');
+    try {
+      await syncWithBackend();
+      await syncToLocalBackend();
+      addToast('Sync complete!', 'success');
+    } catch (error: any) {
+      console.error('Sync failed:', error);
+      addToast(`Sync failed: ${error.message}`, 'error');
+    }
+  };
 
   const isDark = (theme as any).background === '#111827';
-
-
 
   return (
     <SidebarContainer $isSidebarOpen={$isSidebarOpen}>

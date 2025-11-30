@@ -173,13 +173,13 @@ const AppContent: React.FC = () => {
     const initialSync = async () => {
       try {
         await syncWithBackend();
-        await syncToLocalBackend();
-        addToast('Sync with local backend complete!', 'success');
+        setLoading(false); // Unblock UI after essential sync
+        syncToLocalBackend(); // Start local backend sync in the background
+        addToast('Sync with local backend started!', 'success');
       } catch (error) {
         console.error('Initial sync failed:', error);
         addToast('Initial sync failed!', 'error');
-      } finally {
-        setTimeout(() => setLoading(false), 1500); // Increased timeout for animation
+        setLoading(false); // Also unblock UI on error
       }
     };
     initialSync();
