@@ -57,18 +57,20 @@ const CloseButton = styled.button`
   position: absolute;
   top: 16px;
   right: 16px;
-  background: none;
+  background: ;
   border: none;
   width: 36px;
   height: 36px;
   border-radius: 50%;
+  text-color: pink;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-secondary);
+  border: none;
+  color: lightblue;
   transition: background-color 0.2s, color 0.2s;
-  
+
   &:hover {
     background-color: var(--surface-variant);
     color: var(--primary);
@@ -77,6 +79,7 @@ const CloseButton = styled.button`
   svg {
     width: 20px;
     height: 20px;
+    stroke: black; /* Explicitly set stroke to black */
   }
 `;
 
@@ -94,13 +97,13 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title }) => {
     } else {
       document.body.classList.remove('modal-open');
     }
-    
+
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
       }
     };
-    
+
     if (isOpen) {
       window.addEventListener('keydown', handleEsc);
     }
@@ -116,7 +119,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title }) => {
   return (
     <ModalOverlay onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
-        <CloseButton onClick={onClose} aria-label="Close modal"><CloseIcon /></CloseButton>
+        <CloseButton onClick={onClose} aria-label="Close modal">X</CloseButton>
         {title && <h2>{title}</h2>}
         {children}
       </ModalContent>

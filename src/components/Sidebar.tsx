@@ -68,16 +68,16 @@ const Logo = styled.h1`
 `;
 
 const CloseButton = styled.button`
-  background: none;
-  border: none;
+  background: none; /*kkk*/
+  border: 1px solid grey;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 48%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   transition: background-color 0.2s, color 0.2s;
 
   &:hover {
@@ -86,8 +86,10 @@ const CloseButton = styled.button`
   }
 
   svg {
+
     width: 20px;
     height: 20px;
+    stroke: black;
   }
 `;
 
@@ -212,7 +214,7 @@ const Sidebar: React.FC<{
 
         <Logo><BoxIcon /> Smart Stock</Logo>
 
-        <CloseButton onClick={toggleSidebar} aria-label="Close sidebar"><CloseIcon /></CloseButton>
+        <CloseButton onClick={toggleSidebar} aria-label="Close sidebar">X</CloseButton>
 
       </SidebarHeader>
 

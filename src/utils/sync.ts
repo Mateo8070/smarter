@@ -11,33 +11,62 @@ export const syncWithBackend = async () => {
   console.log('Last Synced At:', lastSyncedAt);
 
   // --- 1. PUSH local changes to remote ---
-  const localHardwareChanges = await db.hardware.where('updated_at').above(lastSyncedAt).toArray();
+  const localAuditLogs = await db.audit_log.where('created_at').above(lastSyncedAt).toArray();
+
+  const itemIdsToSync = [...new Set(localAuditLogs.map(log => log.item_id))];
+  const localHardwareChanges = itemIdsToSync.length > 0
+    ? await db.hardware.where('id').anyOf(itemIdsToSync).toArray()
+    : [];
+
   const localNotesChanges = await db.notes.where('updated_at').above(lastSyncedAt).toArray();
   const localCategoriesChanges = await db.categories.where('updated_at').above(lastSyncedAt).toArray();
-  const localAuditLogs = await db.audit_log.where('is_synced').equals(0).toArray();
+
+  // Fetch all categories for name mapping
+  const allCategories = await db.categories.toArray();
+  const categoryIdToNameMap = new Map(allCategories.map(cat => [cat.id, cat.name]));
+
+  // Create a map of item_id to its latest audit log created_at
+  const latestAuditLogTimestamps = new Map<string, string>();
+  for (const log of localAuditLogs) {
+      if (!latestAuditLogTimestamps.has(log.item_id) || log.created_at > latestAuditLogTimestamps.get(log.item_id)!) {
+          latestAuditLogTimestamps.set(log.item_id, log.created_at);
+      }
+  }
+
+  const hardwareToPush = localHardwareChanges.map(item => {
+    const auditCreatedAt = latestAuditLogTimestamps.get(item.id);
+    const categoryName = categoryIdToNameMap.get(item.category_id || '');
+    return {
+        ...item,
+        is_deleted: false, // Ensure it's explicitly false
+        updated_at: auditCreatedAt || item.updated_at || new Date(0).toISOString(), // Use audit log's created_at, or item's updated_at, or a default.
+        category: categoryName || null // Add category name
+    };
+  });
 
   console.log('Local changes to push:', {
-    hardware: localHardwareChanges.length,
+    hardware: hardwareToPush.length,
     notes: localNotesChanges.length,
     categories: localCategoriesChanges.length,
     auditLogs: localAuditLogs.length,
   });
 
+
   let pushedCount = 0;
   try {
+    if (hardwareToPush.length > 0) {
+      console.log('Pushing hardware:', hardwareToPush);
+      const { error } = await supabase.from('hardware').upsert(hardwareToPush as any, { onConflict: 'id' });
+      if (error) throw new Error(`Failed to send inventory changes to the cloud. Details: ${error.message}`);
+      pushedCount += hardwareToPush.length;
+      console.log('Hardware pushed successfully.');
+    }
     if (localCategoriesChanges.length > 0) {
       console.log('Pushing categories:', localCategoriesChanges);
       const { error } = await supabase.from('categories').upsert(localCategoriesChanges as any, { onConflict: 'id' });
       if (error) throw new Error(`Failed to send category changes to the cloud. Details: ${error.message}`);
       pushedCount += localCategoriesChanges.length;
       console.log('Categories pushed successfully.');
-    }
-    if (localHardwareChanges.length > 0) {
-      console.log('Pushing hardware:', localHardwareChanges);
-      const { error } = await supabase.from('hardware').upsert(localHardwareChanges as any, { onConflict: 'id' });
-      if (error) throw new Error(`Failed to send inventory changes to the cloud. Details: ${error.message}`);
-      pushedCount += localHardwareChanges.length;
-      console.log('Hardware pushed successfully.');
     }
     if (localNotesChanges.length > 0) {
       console.log('Pushing notes:', localNotesChanges);
@@ -53,9 +82,7 @@ export const syncWithBackend = async () => {
       const { error } = await supabase.from('audit_log').insert(logsToInsert as any);
       if (error) throw new Error(`Failed to send audit logs to the cloud. Details: ${error.message}`);
       pushedCount += localAuditLogs.length;
-      // Mark audit logs as synced locally
-      await db.audit_log.bulkUpdate(localAuditLogs.map(log => ({ key: log.id, changes: { is_synced: 1 } })));
-      console.log('Audit logs pushed and marked as synced successfully.');
+      console.log('Audit logs pushed successfully.');
     }
   } catch (error) {
     console.error('Error pushing changes to Supabase:', error);
@@ -180,7 +207,7 @@ export const syncWithBackend = async () => {
   };
   export const useSync = () => {
   const { addToast } = useToast();
-  const SYNC_INTERVAL = 14 * 60 * 1000; // 14 minutes
+  const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
   useEffect(() => {
     const periodicSync = async () => {

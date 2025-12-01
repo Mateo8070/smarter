@@ -220,12 +220,15 @@ const InputWrapper = styled.div`
   position: relative;
   display: flex;
   align-items: center;
+  gap: 8px; /* Added gap for flex items */
 `;
 
 const ChatInput = styled.textarea`
-  width: 100%;
-  padding: 12px 16px;
-  padding-left: 48px;
+  flex: 1; /* Make it take available space */
+  padding-top: 12px;
+  padding-bottom: 12px;
+  padding-left: 40px; /* Space for MicButton (new size 32px + 8px padding) */
+  padding-right: 16px; /* Standard padding-right */
   border: 1px solid var(--border);
   border-radius: 24px;
   background-color: var(--surface-variant);
@@ -245,8 +248,8 @@ const ChatInput = styled.textarea`
   }
 
   @media (max-width: 767px) {
-    padding: 12px 12px; /* Reduced horizontal padding */
-    padding-left: 40px; /* Adjusted for MicButton */
+    padding-left: 32px; /* Adjusted for MicButton */
+    padding-right: 12px; /* Standard padding-right for mobile */
   }
 `;
 
@@ -258,8 +261,8 @@ const MicButton = styled.button`
   background-color: transparent;
   color: var(--text-secondary);
   border: none;
-  width: 40px; /* Reverted size */
-  height: 40px; /* Reverted size */
+  width: 32px; /* Adjusted size */
+  height: 32px; /* Adjusted size */
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -272,7 +275,7 @@ const MicButton = styled.button`
     color: var(--text-primary);
   }
   &.mic-active { color: var(--danger); }
-  svg { width: 32px; height: 32px; flex-shrink: 0; } /* Set icon size to 32px */
+  svg { width: 24px; height: 24px; flex-shrink: 0; } /* Adjusted icon size to 24px */
 
   @media (max-width: 767px) {
     left: 0px; /* Moved closer to the edge */
@@ -562,6 +565,8 @@ type Message = Content | CustomAIMessage;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    console.log('Input value:', e.target.value); // Debugging log
+    setInput(e.target.value); // This line is crucial for updating the input state
     setIsInputEmpty(e.target.value.trim() === '');
   };
 
@@ -783,10 +788,10 @@ type Message = Content | CustomAIMessage;
             disabled={isLoading}
             rows={1}
           />
+          <SendButton type="submit" disabled={isInputEmpty || isLoading}>
+            <SendIcon />
+          </SendButton>
         </InputWrapper>
-        <SendButton type="submit" disabled={isInputEmpty || isLoading}>
-          <SendIcon />
-        </SendButton>
       </InputContainer>
       {selectedItem && (
         <ItemDetailsModal

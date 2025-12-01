@@ -103,9 +103,10 @@ const Stock: React.FC<StockProps> = (props) => {
       const newItem: Hardware = {
         ...item,
         id: generateUUID(),
+        updated_at: new Date().toISOString(),
       } as Hardware;
       await addHardware(newItem);
-      
+
       await addAuditLog({
         id: generateUUID(),
         item_id: newItem.id,
@@ -122,7 +123,7 @@ const Stock: React.FC<StockProps> = (props) => {
       addToast('Failed to add item', 'error');
     }
   };
-  
+
   const openDetails = (item: Hardware) => {
     setDetailsItem(item);
     setShowDetailsModal(true);
@@ -178,7 +179,7 @@ const Stock: React.FC<StockProps> = (props) => {
         ...item,
         updated_at: new Date().toISOString(),
       });
-      
+
       await addAuditLog({
         id: generateUUID(),
         item_id: editingItem.id,
@@ -209,7 +210,7 @@ const Stock: React.FC<StockProps> = (props) => {
       const description = itemToDelete?.description || 'Unknown Item';
 
       await deleteHardware(itemToDeleteId);
-      
+
       await addAuditLog({
         id: generateUUID(),
         item_id: itemToDeleteId,
@@ -316,10 +317,10 @@ const Stock: React.FC<StockProps> = (props) => {
     const totalPages = Math.ceil(sorted.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const paginatedItems = sorted.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    
+
     return { paginatedItems, totalPages };
   }, [hardware, searchQuery, selectedCategoryId, sortOrder, currentPage]);
-  
+
   // Effect to adjust current page if it's out of bounds (e.g., after deleting items)
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
@@ -378,7 +379,7 @@ const Stock: React.FC<StockProps> = (props) => {
       </StockPageContainer>
     );
   };
-  
+
   if (hardware === undefined) {
     return renderSkeletons();
   }
@@ -395,7 +396,7 @@ const Stock: React.FC<StockProps> = (props) => {
           ))}
         </FilterContainer>
       </PageHeader>
-      
+
       {paginatedItems.length === 0 ? (
         <EmptyStateContainer>
           <h3>No Items Found</h3>
@@ -441,9 +442,9 @@ const Stock: React.FC<StockProps> = (props) => {
 
               const handlePressStart = () => {
                 longPressTimer = setTimeout(() => {
-                  setIsSelectMode(true);
+                  setIsSelectMode(false);
                   toggleSelectItem(item.id);
-                }, 1000); // 1000ms for long press
+                }, 1500); // 1500ms for long press
               };
 
               const handlePressEnd = () => {
@@ -537,11 +538,11 @@ const Stock: React.FC<StockProps> = (props) => {
       <FloatingActionButton onClick={() => { setEditingItem(undefined); setShowForm(true); }} aria-label="Add stock item">
         <PlusIcon />
       </FloatingActionButton>
-      
+
       <Modal isOpen={showForm} onClose={() => setShowForm(false)} title={editingItem ? 'Edit Item' : 'Add New Item'}>
-        <StockForm 
-            onSubmit={editingItem ? handleUpdateItem : handleAddItem} 
-            initialItem={editingItem} 
+        <StockForm
+            onSubmit={editingItem ? handleUpdateItem : handleAddItem}
+            initialItem={editingItem}
             categories={categories || []}
         />
       </Modal>
