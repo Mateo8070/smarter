@@ -45,9 +45,9 @@ const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any
 const ChatPageContainer = styled.div<{ $isModal?: boolean }>`
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: calc(100vh - 64px); /* Subtract header height */
   flex: 1;
-  max-height: ${({ $isModal }) => ($isModal ? '90vh' : '100%')};
+  max-height: ${({ $isModal }) => ($isModal ? '90vh' : 'calc(100vh - 64px)')};
 
   @media (min-width: 768px) {
     height: 100%; /* Full height for desktop */

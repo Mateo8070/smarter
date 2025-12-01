@@ -116,6 +116,15 @@ const AppContent: React.FC = () => {
   // Activate periodic sync
   useSync();
 
+  const handleSync = async () => {
+    try {
+      await syncWithBackend();
+      addToast('Sync with backend successful!', 'success');
+    } catch (error) {
+      addToast('Failed to sync with backend.', 'error');
+    }
+  };
+
   const setPageWithHistory = (newPage: string, payload?: { auditItemId?: string }) => {
     setPage(newPage);
     if (payload?.auditItemId) setAuditFilterItemId(payload.auditItemId);
@@ -340,6 +349,7 @@ const AppContent: React.FC = () => {
             handleAiClick={handleAiClick}
             mainContentRef={mainContentRef}
             onClearChatbot={handleClearChatbotFromHeader}
+            onSync={handleSync}
           >
             {renderPage()}
           </Layout>

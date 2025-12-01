@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import { HamburgerIcon, ArrowLeftIcon, SearchIcon, SortBarsIcon, MoonIcon, SunIcon, LayoutGridIcon, ListIcon, Volume2Icon, VolumeXIcon, CloseIcon, HomeIcon, ArrowRightIcon, TrashIcon } from './Icons';
+import { HamburgerIcon, ArrowLeftIcon, SearchIcon, SortBarsIcon, MoonIcon, SunIcon, LayoutGridIcon, ListIcon, Volume2Icon, VolumeXIcon, CloseIcon, HomeIcon, ArrowRightIcon, TrashIcon, SyncIcon } from './Icons';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import type { Hardware } from '../types/database';
 
@@ -327,6 +327,7 @@ interface AppHeaderProps {
   toggleTheme: () => void;
   sortOrder: string; // Added sortOrder to props
   onClearChatbot?: () => void;
+  onSync: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
@@ -335,7 +336,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
     isSearchActive, setSearchActive, searchQuery, setSearchQuery,
     hardware, setSortOrder,
     viewMode, setViewMode, showSuggestions, setShowSuggestions
-    , handleAiClick, theme, toggleTheme, sortOrder, onClearChatbot
+    , handleAiClick, theme, toggleTheme, sortOrder, onClearChatbot, onSync
   } = props;
 
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -475,6 +476,11 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
             )}
           </MobileHeaderLeft>
           <MobileHeaderRight>
+            {(page === 'dashboard' || page === 'stock') && (
+              <HeaderButton onClick={onSync} aria-label="Sync with backend">
+                <SyncIcon />
+              </HeaderButton>
+            )}
             {isStockPage && (
               <HeaderButton onClick={() => setSearchActive(true)} aria-label="Search">
                 <SearchIcon />
@@ -554,6 +560,11 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         ) : <div /> /* Empty div to balance the grid */}
 
         <ActionsContainer className="right">
+          {(page === 'dashboard' || page === 'stock') && (
+            <HeaderButton onClick={onSync} aria-label="Sync with backend">
+              <SyncIcon />
+            </HeaderButton>
+          )}
           {page === 'chatbot' && onClearChatbot && (
             <HeaderButton onClick={onClearChatbot} aria-label="Clear conversation">
               <TrashIcon />

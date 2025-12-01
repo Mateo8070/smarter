@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import styled from 'styled-components';
 import AppHeader from './AppHeader';
 import type { Hardware } from '../types/database';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 const LayoutContainer = styled.div`
   display: flex;
@@ -62,6 +63,7 @@ interface LayoutProps {
   handleAiClick: () => void;
   mainContentRef: React.RefObject<HTMLElement>;
   onClearChatbot: (() => void) | undefined;
+  onSync: () => void;
 }
 
 const Layout: React.FC<LayoutProps> = (props) => {
@@ -69,10 +71,11 @@ const Layout: React.FC<LayoutProps> = (props) => {
     children, pageTitle, setPage, toggleTheme, theme, $isSidebarOpen, toggleSidebar, goBack, canGoBack, page,
     isSearchActive, setSearchActive, searchQuery, setSearchQuery, hardware,
     sortOrder, setSortOrder, isHeaderVisible, setIsHeaderVisible, viewMode, setViewMode,
-    showSuggestions, setShowSuggestions, handleAiClick, mainContentRef, onClearChatbot
+    showSuggestions, setShowSuggestions, handleAiClick, mainContentRef, onClearChatbot, onSync
   } = props;
 
   const lastScrollY = useRef(0);
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   useEffect(() => {
     const mainEl = mainContentRef.current;
@@ -84,13 +87,13 @@ const Layout: React.FC<LayoutProps> = (props) => {
           setShowSuggestions(false);
         }
 
-        if (page === 'stock') { // Only apply this behavior on the stock page
+        if (page === 'stock' && !isMobile) { // Only apply this behavior on the stock page on desktop
           if (currentScrollY > lastScrollY.current && currentScrollY > 50 && isHeaderVisible) {
               setIsHeaderVisible(false);
           } else if ((currentScrollY < lastScrollY.current || currentScrollY <= 50) && !isHeaderVisible) {
               setIsHeaderVisible(true);
           }
-        } else {
+        } else if (page !== 'chatbot') { // Always show header on chatbot page
             if (!isHeaderVisible) setIsHeaderVisible(true);
         }
         lastScrollY.current = currentScrollY;
@@ -100,7 +103,7 @@ const Layout: React.FC<LayoutProps> = (props) => {
     return () => {
         mainEl.removeEventListener('scroll', handleScroll);
     };
-  }, [page, isHeaderVisible, setIsHeaderVisible, showSuggestions, setShowSuggestions, mainContentRef]);
+  }, [page, isHeaderVisible, setIsHeaderVisible, showSuggestions, setShowSuggestions, mainContentRef, isMobile]);
 
 
   return (
@@ -136,6 +139,7 @@ const Layout: React.FC<LayoutProps> = (props) => {
           theme={theme}
           toggleTheme={toggleTheme}
           onClearChatbot={onClearChatbot}
+          onSync={onSync}
         />
         <MainContent ref={mainContentRef}>{children}</MainContent>
       </ContentWrapper>
