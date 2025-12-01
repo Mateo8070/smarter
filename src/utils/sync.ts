@@ -35,10 +35,6 @@ export const syncWithBackend = async () => {
       });
     }
 
-  const itemIdsToSync = [...new Set(localAuditLogs.map(log => log.item_id))];
-  const localHardwareChanges = itemIdsToSync.length > 0
-    ? await db.hardware.where('id').anyOf(itemIdsToSync).toArray()
-    : [];
     const itemIdsToSync = [...new Set(localAuditLogs.map(log => log.item_id))];
     console.log('Item IDs to sync based on audit logs:', itemIdsToSync);
     const localHardwareChanges = itemIdsToSync.length > 0
