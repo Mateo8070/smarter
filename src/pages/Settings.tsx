@@ -12,7 +12,11 @@ import {
   SyncButton,
 } from './Settings.styles';
 
-const Settings: React.FC = () => {
+interface SettingsProps {
+  setPage: (page: string) => void;
+}
+
+const Settings: React.FC<SettingsProps> = ({ setPage }) => {
   const { clearDatabase } = useDb();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { addToast } = useToast();
@@ -57,6 +61,16 @@ const Settings: React.FC = () => {
         </SettingsParagraph>
         <SyncButton onClick={handleSync}>
           Sync with Backend
+        </SyncButton>
+      </SettingsCard>
+
+      <SettingsCard>
+        <SettingsTitle>System</SettingsTitle>
+        <SettingsParagraph>
+          View system logs to diagnose issues.
+        </SettingsParagraph>
+        <SyncButton onClick={() => setPage('system-logs')}>
+          System Logs
         </SyncButton>
       </SettingsCard>
 

@@ -48,3 +48,14 @@ export interface AuditLog {
     created_at: string;
     is_synced?: number;
 }
+
+export interface SystemLog {
+  id: string;
+  timestamp: string;
+  phone_info?: string | null;
+  last_synced_at?: string | null;
+  error_message?: string | null;
+  full_error_details?: Record<string, any> | null;
+  log_level: 'INFO' | 'WARNING' | 'ERROR';
+  context?: Record<string, any> | null;
+}

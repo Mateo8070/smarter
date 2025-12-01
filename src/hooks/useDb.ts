@@ -12,7 +12,7 @@ export function useDb() {
   const addHardware = async (item: Hardware) => {
     return await db.hardware.add(item);
   };
-
+ 
   const updateHardware = async (id: string, updates: Partial<Hardware>) => {
     return await db.hardware.update(id, updates);
   };

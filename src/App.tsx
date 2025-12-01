@@ -8,6 +8,7 @@ import AuditLog from './pages/AuditLog';
 import Settings from './pages/Settings';
 import Chatbot from './pages/Chatbot';
 import OutOfStockItems from './pages/OutOfStockItems'; // New import
+import SystemLogs from './pages/SystemLogs';
 import Modal from './components/Modal';
 import StockForm from './components/StockForm';
 import ConfirmationModal from './components/ConfirmationModal';
@@ -258,6 +259,7 @@ const AppContent: React.FC = () => {
     settings: 'Settings',
     chatbot: 'AI Assistant',
     'out-of-stock': 'Out of Stock Items', // Updated page title
+    'system-logs': 'System Logs',
   };
 
   const renderPage = () => {
@@ -282,9 +284,10 @@ const AppContent: React.FC = () => {
       case 'notes': return <Notes />;
       case 'categories': return <Categories />;
       case 'audit-log': return <AuditLog itemId={auditFilterItemId} />;
-      case 'settings': return <Settings />;
+      case 'settings': return <Settings setPage={setPageWithHistory} />;
       case 'chatbot': return <Chatbot setPage={setPageWithHistory} openStockFormWithAIItem={openStockFormWithAIItem} onClearRef={chatbotClearRef} />;
       case 'out-of-stock': return <OutOfStockItems hardware={hardware || []} setPage={setPageWithHistory} />; // Pass setPage
+      case 'system-logs': return <SystemLogs />;
       default: return <Dashboard
         setPage={setPageWithHistory}
         handleAiClick={handleAiClick}

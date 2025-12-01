@@ -7,53 +7,79 @@ import { useToast } from '../components/Toast';
 //added a comment
 export const syncWithBackend = async () => {
   console.log('--- Starting Sync ---');
-  const lastSyncedAt = localStorage.getItem('lastSyncedAt') || new Date(0).toISOString();
-  console.log('Last Synced At:', lastSyncedAt);
+  const syncId = crypto.randomUUID();
+  try {
+    await db.system_logs.add({
+      id: syncId,
+      timestamp: new Date().toISOString(),
+      log_level: 'INFO',
+      error_message: 'Sync with backend started',
+      phone_info: navigator.userAgent,
+      last_synced_at: localStorage.getItem('lastSyncedAt'),
+    });
 
-  // --- 1. PUSH local changes to remote ---
-  const localAuditLogs = await db.audit_log.where('created_at').above(lastSyncedAt).toArray();
+    const lastSyncedAt = localStorage.getItem('lastSyncedAt') || new Date(0).toISOString();
+    console.log('Current UTC time:', new Date().toISOString());
+    console.log('Last Synced At:', lastSyncedAt);
+
+    // --- 1. PUSH local changes to remote ---
+    console.log('Querying local audit logs created after:', lastSyncedAt);
+    const localAuditLogs = await db.audit_log.where('created_at').above(lastSyncedAt).toArray();
+
+    if (localAuditLogs.length === 0) {
+      console.log('No local audit logs found created after Last Synced At.');
+    } else {
+      console.log('Local Audit Logs found:', localAuditLogs.length, localAuditLogs.slice(0, 5)); // Log first 5 for brevity
+      localAuditLogs.slice(0, 5).forEach(log => {
+          console.log(`  Audit Log created_at: ${log.created_at}, Item ID: ${log.item_id}`);
+      });
+    }
 
   const itemIdsToSync = [...new Set(localAuditLogs.map(log => log.item_id))];
   const localHardwareChanges = itemIdsToSync.length > 0
     ? await db.hardware.where('id').anyOf(itemIdsToSync).toArray()
     : [];
+    const itemIdsToSync = [...new Set(localAuditLogs.map(log => log.item_id))];
+    console.log('Item IDs to sync based on audit logs:', itemIdsToSync);
+    const localHardwareChanges = itemIdsToSync.length > 0
+      ? await db.hardware.where('id').anyOf(itemIdsToSync).toArray()
+      : [];
 
-  const localNotesChanges = await db.notes.where('updated_at').above(lastSyncedAt).toArray();
-  const localCategoriesChanges = await db.categories.where('updated_at').above(lastSyncedAt).toArray();
+    const localNotesChanges = await db.notes.where('updated_at').above(lastSyncedAt).toArray();
+    const localCategoriesChanges = await db.categories.where('updated_at').above(lastSyncedAt).toArray();
 
-  // Fetch all categories for name mapping
-  const allCategories = await db.categories.toArray();
-  const categoryIdToNameMap = new Map(allCategories.map(cat => [cat.id, cat.name]));
+    // Fetch all categories for name mapping
+    const allCategories = await db.categories.toArray();
+    const categoryIdToNameMap = new Map(allCategories.map(cat => [cat.id, cat.name]));
 
-  // Create a map of item_id to its latest audit log created_at
-  const latestAuditLogTimestamps = new Map<string, string>();
-  for (const log of localAuditLogs) {
-      if (!latestAuditLogTimestamps.has(log.item_id) || log.created_at > latestAuditLogTimestamps.get(log.item_id)!) {
-          latestAuditLogTimestamps.set(log.item_id, log.created_at);
-      }
-  }
+    // Create a map of item_id to its latest audit log created_at
+    const latestAuditLogTimestamps = new Map<string, string>();
+    for (const log of localAuditLogs) {
+        if (!latestAuditLogTimestamps.has(log.item_id) || log.created_at > latestAuditLogTimestamps.get(log.item_id)!) {
+            latestAuditLogTimestamps.set(log.item_id, log.created_at);
+        }
+    }
 
-  const hardwareToPush = localHardwareChanges.map(item => {
-    const auditCreatedAt = latestAuditLogTimestamps.get(item.id);
-    const categoryName = categoryIdToNameMap.get(item.category_id || '');
-    return {
-        ...item,
-        is_deleted: false, // Ensure it's explicitly false
-        updated_at: auditCreatedAt || item.updated_at || new Date(0).toISOString(), // Use audit log's created_at, or item's updated_at, or a default.
-        category: categoryName || null // Add category name
-    };
-  });
+    const hardwareToPush = localHardwareChanges.map(item => {
+      const auditCreatedAt = latestAuditLogTimestamps.get(item.id);
+      const categoryName = categoryIdToNameMap.get(item.category_id || '');
+      return {
+          ...item,
+          is_deleted: false, // Ensure it's explicitly false
+          updated_at: auditCreatedAt || item.updated_at || new Date(0).toISOString(), // Use audit log's created_at, or item's updated_at, or a default.
+          category: categoryName || null // Add category name
+      };
+    });
 
-  console.log('Local changes to push:', {
-    hardware: hardwareToPush.length,
-    notes: localNotesChanges.length,
-    categories: localCategoriesChanges.length,
-    auditLogs: localAuditLogs.length,
-  });
+    console.log('Local changes to push:', {
+      hardware: hardwareToPush.length,
+      notes: localNotesChanges.length,
+      categories: localCategoriesChanges.length,
+      auditLogs: localAuditLogs.length,
+    });
 
 
-  let pushedCount = 0;
-  try {
+    let pushedCount = 0;
     if (hardwareToPush.length > 0) {
       console.log('Pushing hardware:', hardwareToPush);
       const { error } = await supabase.from('hardware').upsert(hardwareToPush as any, { onConflict: 'id' });
@@ -84,16 +110,11 @@ export const syncWithBackend = async () => {
       pushedCount += localAuditLogs.length;
       console.log('Audit logs pushed successfully.');
     }
-  } catch (error) {
-    console.error('Error pushing changes to Supabase:', error);
-    throw error;
-  }
 
-  // --- 2. PULL remote changes to local ---
-  const newSyncedAt = new Date().toISOString();
-  let pulledCount = 0;
+    // --- 2. PULL remote changes to local ---
+    const newSyncedAt = new Date().toISOString();
+    let pulledCount = 0;
 
-  try {
     console.log('Pulling remote changes from Supabase...');
     const { data: remoteCategories, error: categoriesError } = await supabase.from('categories').select('*');
     if (categoriesError) throw new Error(`Failed to get category updates from the cloud. Details: ${categoriesError.message}`);
@@ -166,22 +187,58 @@ export const syncWithBackend = async () => {
     });
     console.log('Local reconciliation complete.');
 
+    // --- 4. Update last synced timestamp ---
+    // If local audit logs were found and pushed, update lastSyncedAt to the latest created_at of those logs.
+    // Otherwise, lastSyncedAt should not change based on current time.
+    if (localAuditLogs.length > 0 && pushedCount > 0) {
+      const latestPushedAuditLogTime = localAuditLogs.reduce((maxDate, log) => {
+        return log.created_at > maxDate ? log.created_at : maxDate;
+      }, new Date(0).toISOString());
+      localStorage.setItem('lastSyncedAt', latestPushedAuditLogTime);
+      console.log('Last Synced At updated to latest pushed audit log time:', latestPushedAuditLogTime);
+    } else {
+      console.log('No local audit logs were pushed, Last Synced At remains unchanged.');
+    }
+
+    await db.system_logs.add({
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      log_level: 'INFO',
+      error_message: 'Sync with backend completed successfully',
+      context: { syncId, pushedCount, pulledCount },
+      phone_info: navigator.userAgent,
+      last_synced_at: localStorage.getItem('lastSyncedAt'),
+    });
+    console.log('--- Sync Complete! Pushed:', pushedCount, 'Pulled:', pulledCount, '---');
   } catch (error) {
-    console.error('Error pulling or reconciling changes from Supabase:', error);
+    await db.system_logs.add({
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      log_level: 'ERROR',
+      error_message: 'Sync with backend failed',
+      full_error_details: { error: error instanceof Error ? error.message : String(error) },
+      context: { syncId },
+      phone_info: navigator.userAgent,
+      last_synced_at: localStorage.getItem('lastSyncedAt'),
+    });
+    console.error('Error pushing changes to Supabase:', error);
     throw error;
   }
-
-  // --- 4. Update last synced timestamp ---
-  localStorage.setItem('lastSyncedAt', newSyncedAt);
-  console.log('Last Synced At updated to:', newSyncedAt);
-
-      console.log('--- Sync Complete! Pushed:', pushedCount, 'Pulled:', pulledCount, '---');
-  };
+};
 
   export const syncToLocalBackend = async () => {
     console.log('--- Starting Sync with local backend ---');
-
+    const syncId = crypto.randomUUID();
     try {
+      await db.system_logs.add({
+        id: syncId,
+        timestamp: new Date().toISOString(),
+        log_level: 'INFO',
+        error_message: 'Sync started',
+        phone_info: navigator.userAgent,
+        last_synced_at: localStorage.getItem('lastSyncedAt'),
+      });
+
       const categories = await db.categories.toArray();
       const hardware = await db.hardware.toArray();
       const notes = await db.notes.toArray();
@@ -198,9 +255,28 @@ export const syncWithBackend = async () => {
         throw new Error('Failed to sync with backend');
       }
 
+      await db.system_logs.add({
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        log_level: 'INFO',
+        error_message: 'Sync completed successfully',
+        context: { syncId },
+        phone_info: navigator.userAgent,
+        last_synced_at: localStorage.getItem('lastSyncedAt'),
+      });
       console.log('--- Sync to local backend Complete! ---');
 
     } catch (error) {
+      await db.system_logs.add({
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        log_level: 'ERROR',
+        error_message: 'Sync failed',
+        full_error_details: { error: error instanceof Error ? error.message : String(error) },
+        context: { syncId },
+        phone_info: navigator.userAgent,
+        last_synced_at: localStorage.getItem('lastSyncedAt'),
+      });
       console.error('Error syncing with local backend:', error);
       throw error;
     }
