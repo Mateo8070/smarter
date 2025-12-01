@@ -6,6 +6,7 @@ import type { Hardware } from '../types/database';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useToast } from '../components/Toast';
+import { syncWithBackend } from '../utils/sync';
 import {
   StockPageContainer,
   FilterContainer,
@@ -106,6 +107,7 @@ const Stock: React.FC<StockProps> = (props) => {
         updated_at: new Date().toISOString(),
       } as Hardware;
       await addHardware(newItem);
+      syncWithBackend();
 
       await addAuditLog({
         id: generateUUID(),
@@ -180,6 +182,9 @@ const Stock: React.FC<StockProps> = (props) => {
         updated_at: new Date().toISOString(),
       });
 
+      console.log("Item deleted, triggering sync")
+      syncWithBackend();
+
       await addAuditLog({
         id: generateUUID(),
         item_id: editingItem.id,
@@ -210,6 +215,9 @@ const Stock: React.FC<StockProps> = (props) => {
       const description = itemToDelete?.description || 'Unknown Item';
 
       await deleteHardware(itemToDeleteId);
+
+      console.log("Item deleted, triggering sync")
+      syncWithBackend();
 
       await addAuditLog({
         id: generateUUID(),
@@ -245,6 +253,9 @@ const Stock: React.FC<StockProps> = (props) => {
           is_synced: 0
         });
       }
+
+       console.log("Bulk deletion done, triggering sync")
+      syncWithBackend(); // Trigger sync after successful bulk deletion
       addToast(`${itemsToBulkDeleteIds.length} items deleted`, 'success');
       setIsSelectMode(false);
       setSelectedItems(new Set());
@@ -273,6 +284,9 @@ const Stock: React.FC<StockProps> = (props) => {
           is_synced: 0
         });
       }
+
+       console.log("Items deleted, triggering sync")
+      syncWithBackend(); // Trigger sync after successful bulk reassign
       addToast(`${selectedItems.size} items reassigned`, 'success');
       setIsSelectMode(false);
       setSelectedItems(new Set());
